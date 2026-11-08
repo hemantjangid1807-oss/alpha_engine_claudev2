@@ -1,0 +1,31 @@
+# Builds the installable APK on GitHub's servers. Push this project to a GitHub repo, open the
+# "Actions" tab, pick the latest "Build APK" run and download "BrainAutoSim-apk" at the bottom.
+name: Build APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+
+      - name: Name the APK
+        run: cp app/build/outputs/apk/release/app-release.apk BrainAutoSim.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BrainAutoSim-apk
+          path: BrainAutoSim.apk
