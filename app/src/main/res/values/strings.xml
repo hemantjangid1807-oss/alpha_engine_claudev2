@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Brain AutoSim</string>
+    <string name="import_alphas">Import alphas</string>
+    <string name="share_results">Share results</string>
+    <string name="no_share_app">No app on this phone can receive the file.</string>
+    <string name="no_browser">No browser found to open the link.</string>
+    <string name="notif_running">Simulating alphas</string>
+    <string name="channel_run">Simulation progress</string>
+    <string name="channel_done">Run finished</string>
+</resources>

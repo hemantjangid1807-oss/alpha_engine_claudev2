@@ -1,0 +1,52 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.brainautosim.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.brainautosim.app'
+        minSdk 24
+        targetSdk 35
+        versionCode 2
+        versionName '1.1'
+    }
+
+    // One fixed key for every build, so a newer APK installs over an older one without losing data.
+    // It is fine for your own phone. For Play Store or public releases, make your own key
+    // (Android Studio > Build > Generate Signed App Bundle / APK) and point this block at it.
+    signingConfigs {
+        app {
+            storeFile file('brainautosim.keystore')
+            storePassword 'brainautosim'
+            keyAlias 'brainautosim'
+            keyPassword 'brainautosim'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.app
+        }
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.app
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+}

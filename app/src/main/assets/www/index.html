@@ -1,0 +1,1413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Brain AutoSim</title>
+<style>
+:root{
+  --bg:#e8ecf1; --surface:#ffffff; --surface-2:#f3f5f8; --ink:#101a2e; --muted:#5a6578; --line:#d3dae3;
+  --accent:#2b3fe0; --accent-ink:#ffffff; --accent-soft:#e3e7ff;
+  --good:#0a8458; --good-soft:#d9f2e7; --warn:#9a5b06; --warn-soft:#faedd0; --bad:#bb2d39; --bad-soft:#fbe3e5;
+  --shadow:0 1px 2px rgba(16,26,46,.06),0 8px 24px -12px rgba(16,26,46,.18);
+  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,"Noto Serif",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"Cascadia Code","SF Mono",Menlo,Consolas,"Roboto Mono","Droid Sans Mono",monospace;
+  --sat:0px; --sab:0px; --nav-h:0px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0c1220; --surface:#151c2d; --surface-2:#1b2438; --ink:#e7ecf6; --muted:#97a3b8; --line:#2a3550;
+    --accent:#7d8cff; --accent-ink:#0c1220; --accent-soft:#222c57;
+    --good:#4fd1a0; --good-soft:#12362b; --warn:#f0b45a; --warn-soft:#3a2c10; --bad:#ff7b86; --bad-soft:#402027;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+html{-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh;padding-bottom:calc(84px + var(--sab))}
+h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:-.01em;margin:0}
+h2{font-size:1.55rem;line-height:1.2}
+h3{font-size:1.1rem}
+p{margin:.2rem 0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.mono{font-family:var(--mono)}
+.num{font-variant-numeric:tabular-nums}
+html:not(.android) .android-only{display:none!important}
+
+/* top bar */
+header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding-top:var(--sat)}
+.top-in{max-width:1240px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:20px}
+.brand{font:600 1.25rem var(--serif);letter-spacing:-.02em;display:flex;align-items:center;gap:9px;white-space:nowrap;flex:none}
+.brand svg{flex:none}
+nav.tabs{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+nav.tabs button{background:none;border:0;padding:8px 13px;border-radius:9px;cursor:pointer;color:var(--muted);font-weight:500;display:flex;gap:8px;align-items:center;position:relative}
+nav.tabs button:hover{background:var(--surface-2);color:var(--ink)}
+nav.tabs button[aria-current=page]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+nav.tabs .step{width:21px;height:21px;border-radius:50%;background:var(--line);color:var(--ink);font-size:.76rem;display:grid;place-items:center;font-weight:600}
+nav.tabs button[aria-current=page] .step{background:var(--accent);color:var(--accent-ink)}
+nav.tabs .sep{width:1px;background:var(--line);margin:6px 8px}
+nav.tabs .ico{display:none;width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs .lbl-m{display:none}
+.nbadge{display:none}
+.nbadge:not(:empty){display:inline-block;background:var(--accent);color:var(--accent-ink);font-size:.68rem;font-weight:700;padding:1px 6px;border-radius:99px;line-height:1.35;font-variant-numeric:tabular-nums}
+.who{display:flex;align-items:center;gap:10px;font-size:.88rem;margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:.8rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good);flex:none}
+
+main{max-width:1240px;margin:0 auto;padding:26px 20px}
+.view-head{margin-bottom:18px}
+.view-head p{color:var(--muted);max-width:68ch;margin-top:4px}
+
+/* cards & forms */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+.grid-2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:940px){.grid-2{grid-template-columns:1fr}}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.between{justify-content:space-between}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.field>label,.field>.lbl{font-weight:600;font-size:.9rem}
+.hint{color:var(--muted);font-size:.82rem;line-height:1.4}
+input[type=text],input[type=email],input[type=password],input[type=number],select,textarea{
+  width:100%;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
+textarea{resize:vertical;font-family:var(--mono);font-size:.88rem;line-height:1.55}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);outline:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:10px;cursor:pointer;font-weight:550;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.btn.ghost{border-color:transparent;background:none;color:var(--accent)}
+.btn.ghost:hover{background:var(--accent-soft)}
+.btn.big{padding:12px 22px;font-size:1.02rem;border-radius:12px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:4px 10px;font-size:.82rem;border-radius:8px}
+.check{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.check input{margin-top:4px;accent-color:var(--accent);width:16px;height:16px;flex:none}
+.check .t{font-weight:550}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg label{cursor:pointer}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:inline-block;padding:6px 12px;border:1px solid var(--line);border-radius:99px;background:var(--surface);font-size:.86rem;font-weight:550}
+.seg input:checked+span{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+details.adv{border-top:1px solid var(--line);padding-top:12px;margin-top:6px}
+details.adv summary{cursor:pointer;font-weight:600;color:var(--muted)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+input[type=range]{width:100%;accent-color:var(--accent)}
+
+/* login */
+#view-login{display:grid;place-items:center;min-height:68vh}
+.login-card{width:min(440px,100%)}
+.login-card h1{font-size:2rem;line-height:1.1;margin-bottom:8px}
+.login-card .lede{color:var(--muted);margin-bottom:20px}
+.err{background:var(--bad-soft);color:var(--bad);padding:10px 12px;border-radius:9px;margin-bottom:12px;font-size:.9rem}
+.or{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.82rem;margin:16px 0}
+.or:before,.or:after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* alphas */
+#alphaText{min-height:360px;background-image:linear-gradient(var(--line) 1px,transparent 1px);background-size:100% 1.55em;background-position:0 .5em;background-attachment:local;background-color:var(--surface)}
+.stat-line{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:.88rem}
+.lint{margin-top:10px;background:var(--warn-soft);color:var(--warn);border-radius:9px;padding:9px 12px;font-size:.85rem;max-height:120px;overflow:auto}
+.preview{background:var(--surface-2);border-radius:9px;padding:10px 12px;font:.82rem/1.6 var(--mono);max-height:150px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+.phs{display:grid;gap:10px;margin:12px 0}
+.ph{display:grid;grid-template-columns:90px 1fr;gap:10px;align-items:center}
+.ph code{font:600 .85rem var(--mono);background:var(--accent-soft);color:var(--accent);padding:3px 8px;border-radius:6px;text-align:center;overflow:hidden;text-overflow:ellipsis}
+
+/* run */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:14px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile .v{font:600 1.75rem var(--serif);font-variant-numeric:tabular-nums;line-height:1.1}
+.tile .l{color:var(--muted);font-size:.82rem}
+.tile.good .v{color:var(--good)} .tile.warn .v{color:var(--warn)} .tile.bad .v{color:var(--bad)}
+.bar{height:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.bar b{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .5s}
+.bar.paused b{background:var(--warn)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 10px}
+.filters input[type=text]{width:220px}
+.filters select{width:auto}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{padding:5px 12px;border-radius:99px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:.85rem;font-weight:550;white-space:nowrap}
+.pill[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:transparent}
+.pill .n{opacity:.65;margin-left:4px}
+.tbl-wrap{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:auto;max-height:560px}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th{position:sticky;top:0;background:var(--surface-2);text-align:left;padding:9px 12px;font-weight:600;font-size:.8rem;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:1px solid var(--line);user-select:none;z-index:1}
+th.r,td.r{text-align:right}
+th:hover{color:var(--ink)}
+th .ar{display:inline-block;width:1em;color:var(--accent)}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+#res-table tbody tr{cursor:pointer}
+td.iss{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td.var{white-space:nowrap}
+tbody tr:hover{background:var(--surface-2)}
+#res-table tbody tr.good td:first-child{box-shadow:inset 3px 0 0 var(--good)}
+td.expr{font:.82rem var(--mono);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st{display:inline-block;padding:2px 9px;border-radius:99px;font-size:.76rem;font-weight:650}
+.st.good{background:var(--good-soft);color:var(--good)} .st.passed{background:var(--accent-soft);color:var(--accent)}
+.st.issues{background:var(--warn-soft);color:var(--warn)} .st.error{background:var(--bad-soft);color:var(--bad)}
+.meter{display:block;height:3px;background:var(--line);border-radius:2px;margin-top:3px;width:54px;margin-left:auto;overflow:hidden}
+.meter b{display:block;height:100%;background:var(--accent)}
+.meter.neg b{background:var(--bad)}
+.hi{color:var(--good);font-weight:650}
+.empty{padding:50px 20px;text-align:center;color:var(--muted)}
+.empty h3{color:var(--ink);margin-bottom:6px}
+#log{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font:.78rem/1.65 var(--mono);max-height:200px;overflow:auto;margin-top:8px;word-break:break-word}
+#log .error{color:var(--bad)} #log .warn{color:var(--warn)} #log .ok{color:var(--good)} #log .t{color:var(--muted);margin-right:8px}
+
+/* drawer */
+#scrim{position:fixed;inset:0;background:rgba(8,12,24,.45);z-index:40;opacity:0;pointer-events:none;transition:opacity .2s}
+#scrim.on{opacity:1;pointer-events:auto}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--surface);z-index:41;transform:translateX(100%);transition:transform .22s;overflow:auto;padding:calc(24px + var(--sat)) 24px calc(24px + var(--sab));border-left:1px solid var(--line);overscroll-behavior:contain}
+#drawer.on{transform:none}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.mgrid div{background:var(--surface-2);border-radius:10px;padding:9px 11px}
+.mgrid .v{font:600 1.25rem var(--serif);font-variant-numeric:tabular-nums}
+.mgrid .l{font-size:.76rem;color:var(--muted)}
+.expr-box{font:.86rem/1.5 var(--mono);background:var(--surface-2);border-radius:10px;padding:12px;word-break:break-all;margin:10px 0}
+.checks{display:grid;gap:6px;margin:8px 0 16px}
+.checks .c{display:flex;justify-content:space-between;gap:10px;padding:7px 11px;border-radius:8px;background:var(--surface-2);font-size:.85rem}
+.checks .PASS{border-left:3px solid var(--good)} .checks .FAIL{border-left:3px solid var(--bad);background:var(--bad-soft)}
+.checks .WARNING{border-left:3px solid var(--warn)} .checks .PENDING{border-left:3px solid var(--line)}
+svg.chart{width:100%;height:auto;display:block;background:var(--surface-2);border-radius:10px}
+
+/* explorer */
+.subtabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.explore-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.explore-bar input{max-width:320px}
+.badge{display:inline-block;background:var(--accent-soft);color:var(--accent);padding:2px 9px;border-radius:99px;font-size:.78rem;font-weight:600}
+.vec{background:var(--warn-soft);color:var(--warn)}
+
+/* help */
+.help-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.help-grid dt{font-weight:650;margin-top:10px}
+.help-grid dd{margin:2px 0 0;color:var(--muted)}
+.how{counter-reset:s;list-style:none;padding:0;margin:8px 0 0}
+.how li{counter-increment:s;padding-left:38px;position:relative;margin:12px 0}
+.how li:before{content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:.85rem}
+
+/* action bar */
+#actionbar{position:fixed;left:0;right:0;bottom:var(--nav-h);z-index:30;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 24px -16px rgba(16,26,46,.35);padding-bottom:var(--sab)}
+.ab-in{max-width:1240px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap}
+#ab-sum{font-size:.95rem}
+#ab-sum b{font-variant-numeric:tabular-nums}
+
+#toasts{position:fixed;bottom:calc(92px + var(--sab) + var(--nav-h));left:50%;transform:translateX(-50%);z-index:60;display:grid;gap:8px;justify-items:center;pointer-events:none;width:max-content;max-width:calc(100% - 28px)}
+.toast{background:var(--ink);color:var(--surface);padding:10px 14px;border-radius:10px;box-shadow:var(--shadow);max-width:360px;font-size:.9rem;animation:tin .2s}
+.toast.bad{background:var(--bad);color:#fff}
+@keyframes tin{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:24px;max-width:min(460px,calc(100vw - 32px));box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(8,12,24,.5)}
+.demo-banner{background:var(--warn-soft);color:var(--warn);text-align:center;font-size:.85rem;padding:6px;font-weight:600}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* modes, folds, fill dialog, AI, submission */
+.modebar{display:inline-flex;gap:4px;background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px}
+.modebar button{border:0;background:none;padding:8px 16px;border-radius:9px;font-weight:600;color:var(--muted);cursor:pointer}
+.modebar button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.stack{display:grid;gap:18px;align-content:start}
+details.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px}
+details.fold>summary h3{flex:1}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);margin:0 4px 4px;transition:transform .2s;flex:none}
+details.fold[open]>summary::after{transform:rotate(-135deg);margin-bottom:0}
+details.fold[open]>summary{margin-bottom:10px}
+.ph{grid-template-columns:90px minmax(0,1fr) auto}
+.ph-note{grid-column:2/-1;font-size:.78rem;color:var(--muted);margin-top:-6px;line-height:1.35}
+.ph-note b{color:var(--good);font-weight:650}
+.ph-note .stale{color:var(--warn)}
+.row.nowrap{flex-wrap:nowrap}
+.row.nowrap>input{flex:1;min-width:0}
+.cols3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cols3 select{padding:9px 6px}
+.cols .wide{grid-column:1/-1}
+details.fold>summary h3{white-space:nowrap}
+details.fold>summary .small{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+dialog.sheet{width:min(600px,calc(100vw - 16px));max-height:calc(100vh - 24px - var(--sat) - var(--sab));overflow:auto;padding:18px;overscroll-behavior:contain}
+.checklist{display:grid;gap:6px;max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface-2)}
+.checklist label{display:flex;gap:8px;align-items:flex-start;font-size:.86rem;cursor:pointer;line-height:1.35}
+.checklist input{margin-top:3px;accent-color:var(--accent);flex:none}
+.checklist .muted{font-size:.76rem}
+.lists{display:grid;gap:8px;margin-bottom:14px}
+.li{border:1px solid var(--line);border-radius:10px;padding:9px 11px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:center}
+.li .pv{grid-column:1/-1;font:.76rem var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .tag{font-size:.7rem;color:var(--accent);font-weight:650;margin-left:6px}
+.subst{display:inline-block;padding:1px 8px;border-radius:99px;font-size:.72rem;font-weight:650;background:var(--good-soft);color:var(--good);margin-left:6px;white-space:nowrap}
+.subst.fail{background:var(--bad-soft);color:var(--bad)}
+.subst.pend{background:var(--warn-soft);color:var(--warn)}
+.tbadge{display:inline-block;font:700 .64rem var(--sans);letter-spacing:.05em;padding:1px 6px;border-radius:5px;background:var(--accent-soft);color:var(--accent);margin-right:6px;vertical-align:1px}
+.sel-line{display:block;color:var(--muted);font-size:.74rem;overflow:hidden;text-overflow:ellipsis}
+.subbox{border:1px solid var(--line);border-radius:12px;padding:12px;margin:14px 0;background:var(--surface-2)}
+.ok-msg{background:var(--good-soft);color:var(--good);padding:10px 12px;border-radius:9px;font-size:.88rem}
+.info-msg{background:var(--accent-soft);color:var(--accent);padding:10px 12px;border-radius:9px;font-size:.88rem}
+.subbox .err{margin:0}
+.lbl-s{font-size:.76rem;color:var(--muted);font-weight:600;margin-top:8px}
+
+/* ------------------------------------------------------------------ phones */
+@media(max-width:760px){
+  :root{--nav-h:calc(62px + var(--sab))}
+  body{font-size:14.5px;padding-bottom:calc(var(--nav-h) + 18px)}
+  body.has-ab{padding-bottom:calc(var(--nav-h) + 82px)}
+  body.no-nav{--nav-h:0px;padding-bottom:calc(24px + var(--sab))}
+  /* no blur here: a filtered parent would pin the bottom nav to the header instead of the screen */
+  header.top{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--bg)}
+  .top-in{padding:9px 14px;gap:10px}
+  .brand{font-size:1.14rem}
+  .who .chip{display:none}
+  .who .btn{padding:6px 11px}
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:35;display:grid;grid-template-columns:repeat(5,1fr);gap:2px;background:var(--surface);border-top:1px solid var(--line);padding:5px 4px calc(5px + var(--sab));box-shadow:0 -6px 18px -14px rgba(16,26,46,.4)}
+  nav.tabs .sep,nav.tabs .step,nav.tabs .lbl-d{display:none}
+  nav.tabs .lbl-m{display:inline}
+  nav.tabs .ico{display:block}
+  nav.tabs button{flex-direction:column;gap:2px;padding:6px 2px 5px;font-size:.72rem;font-weight:600;border-radius:12px;min-height:50px;justify-content:center}
+  nav.tabs button[aria-current=page]{background:var(--accent-soft);color:var(--accent);box-shadow:none}
+  nav.tabs .nbadge:not(:empty){position:absolute;top:2px;left:calc(50% + 4px);font-size:.6rem;padding:0 5px}
+  #actionbar{padding-bottom:0}
+  body.no-nav #actionbar{padding-bottom:var(--sab)}
+  .ab-in{padding:9px 14px;gap:12px;flex-wrap:nowrap}
+  #ab-sum{font-size:.8rem;line-height:1.3;min-width:0}
+  #ab-note{display:none}
+  #btn-start.big{padding:11px 16px;font-size:.95rem}
+  #toasts{bottom:calc(var(--nav-h) + 84px)}
+  main{padding:16px 14px}
+  h2{font-size:1.38rem}
+  .view-head{margin-bottom:14px}
+  .card{padding:16px;border-radius:13px}
+  #alphaText{min-height:250px}
+  .ph{grid-template-columns:76px 1fr}
+  #view-login{min-height:auto;padding-top:2vh}
+  .login-card h1{font-size:1.6rem}
+  .btn{min-height:40px}
+  .btn.sm{min-height:34px;padding:5px 11px}
+  .tiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .tile{padding:9px 11px;border-radius:11px}
+  .tile .v{font-size:1.4rem}
+  .tile .l{font-size:.72rem;line-height:1.3}
+  .view-head.row{flex-direction:column;align-items:stretch}
+  .view-head.row>.row:empty{display:none}
+  .filters{gap:8px}
+  .pills{flex-wrap:nowrap;overflow-x:auto;width:100%;scrollbar-width:none;margin:0 -14px;padding:2px 14px}
+  .pills::-webkit-scrollbar{display:none}
+  .filters input[type=text]{width:100%;flex:1 1 100%}
+  .filters .spacer{display:none}
+  .filters select{flex:1}
+  .explore-bar input{max-width:none;flex:1 1 160px}
+  .tbl-wrap{max-height:none;overflow:visible;border-radius:13px}
+  #drawer{padding:calc(16px + var(--sat)) 16px calc(24px + var(--sab))}
+  .mgrid .v{font-size:1.1rem}
+  .help-grid{grid-template-columns:1fr}
+
+  .modebar{display:flex}
+  .modebar button{flex:1;padding:9px 6px}
+  .stack{gap:14px}
+  dialog.sheet{padding:16px 14px}
+  .ph{grid-template-columns:76px minmax(0,1fr) auto}
+
+  /* tables become cards */
+  .cards thead{display:none}
+  .cards,.cards tbody{display:block}
+  .cards tr{display:grid;gap:6px 12px;padding:12px 14px;border-bottom:1px solid var(--line);align-items:start}
+  .cards tr:last-child{border-bottom:0}
+  .cards td{display:block;padding:0;border:0;text-align:left!important;max-width:none;min-width:0}
+  .cards td[data-l]::before{content:attr(data-l);display:block;font:500 .68rem var(--sans);color:var(--muted);letter-spacing:.02em;margin-bottom:1px}
+
+  #res-table tr{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #res-table tbody tr.good{box-shadow:inset 3px 0 0 var(--good)}
+  #res-table tbody tr.good td:first-child{box-shadow:none}
+  #res-table td.c-st{grid-area:1/1/2/3}
+  #res-table td.c-var{grid-area:1/3/2/5;text-align:right!important;font-size:.75rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;align-self:center}
+  #res-table td.expr{grid-area:2/1/3/5;white-space:normal;word-break:break-all;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.8rem;line-height:1.45}
+  #res-table td.c-iss{grid-column:3/5;white-space:normal;font-size:.76rem;line-height:1.35}
+  #res-table td.c-m{font-size:.9rem}
+  #res-table .meter{margin-left:0;width:44px}
+
+  #f-table tr{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #f-table td.f-id{grid-area:1/1/2/3;word-break:break-all}
+  #f-table td.f-type{grid-area:1/3/2/4;text-align:right!important}
+  #f-table td.f-desc{grid-area:2/1/3/4}
+  #f-table td.f-act{grid-column:1/4;display:flex;gap:8px;margin-top:2px}
+  #d-table tr{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #d-table td.d-id{grid-area:1/1/2/3}
+  #d-table td.d-act{grid-area:1/3/2/4;text-align:right!important}
+  #d-table td.d-name{grid-area:2/1/3/4}
+  #o-table tr{grid-template-columns:minmax(0,1fr) auto}
+  #o-table td.o-cat{text-align:right!important}
+  #o-table td.o-def,#o-table td.o-desc{grid-column:1/3}
+}
+</style>
+</head>
+<body class="no-nav">
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--accent)"/><path d="M4 18 L9 12 L13 15 L22 6" fill="none" stroke="var(--accent-ink)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Brain AutoSim
+    </div>
+    <nav class="tabs hidden" id="nav" aria-label="Sections">
+      <button data-view="alphas"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h11M4 18h14"/></svg><span class="step">1</span><span>Alphas</span></button>
+      <button data-view="settings"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg><span class="step">2</span><span>Settings</span></button>
+      <button data-view="run"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 18.5 9 12.5l4 3.5 7.5-8.5"/></svg><span class="step">3</span><span>Run<span class="lbl-d"> &amp; results</span></span><span class="nbadge" id="nav-badge"></span></button>
+      <span class="sep"></span>
+      <button data-view="explore"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/></svg><span class="lbl-d">Data explorer</span><span class="lbl-m">Explore</span></button>
+      <button data-view="help"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.6 2.3c-.7.4-1.2.9-1.2 1.7v.4"/><path d="M12 17.2v.1"/></svg><span>Help</span></button>
+    </nav>
+    <div class="who hidden" id="who">
+      <span class="chip" id="who-chip"><span class="dot"></span><span id="who-email"></span></span>
+      <button class="btn sm" id="btn-logout">Sign out</button>
+    </div>
+  </div>
+</header>
+<div id="demo-banner" class="demo-banner hidden">Demo mode: all numbers are made up. Nothing is sent to WorldQuant.</div>
+
+<main>
+<!-- LOGIN -->
+<section id="view-login" class="hidden">
+  <div class="card login-card">
+    <h1>Test hundreds of alpha ideas without clicking through each one.</h1>
+    <p class="lede">Sign in with your WorldQuant BRAIN account, paste your expressions, press Start. Your password goes only to WorldQuant.</p>
+    <div id="login-err" class="err hidden"></div>
+    <form id="login-form">
+      <div class="field"><label for="email">BRAIN email</label><input id="email" type="email" autocomplete="username" autocapitalize="off" required></div>
+      <div class="field"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password"></div>
+      <label class="check" style="margin-bottom:8px"><input type="checkbox" id="rem-email" checked><span><span class="t">Remember my email</span></span></label>
+      <label class="check" style="margin-bottom:16px"><input type="checkbox" id="rem-pass"><span><span class="t">Also remember my password on this device</span><br><span class="hint">Kept privately inside the app. Leave unticked on a shared device.</span></span></label>
+      <button class="btn primary big" id="btn-login" type="submit" style="width:100%;justify-content:center">Sign in</button>
+    </form>
+    <div class="or">or</div>
+    <button class="btn" id="btn-demo" style="width:100%;justify-content:center">Try the demo (no account needed)</button>
+  </div>
+</section>
+
+<!-- ALPHAS -->
+<section id="view-alphas" class="hidden">
+  <div class="view-head"><h2>Your alpha ideas</h2>
+    <p id="alphas-sub">One expression per line. Type or paste them, generate many from a template, or let an AI write them. Lines starting with # are ignored.</p></div>
+  <div class="modebar" role="group" aria-label="What to simulate">
+    <button data-mode="regular" aria-pressed="true">Regular alphas</button>
+    <button data-mode="super" aria-pressed="false">Super alphas</button>
+  </div>
+
+  <div id="mode-regular" class="grid-2">
+    <div class="card">
+      <div class="row between" style="margin-bottom:10px">
+        <h3>Alpha list</h3>
+        <div class="row" style="gap:6px">
+          <button class="btn sm" id="btn-examples">Load examples</button>
+          <label class="btn sm" for="file-in" style="cursor:pointer">Import file</label>
+          <input type="file" id="file-in" accept=".txt,.csv,.tsv,text/plain,text/csv" class="hidden">
+          <button class="btn sm" id="btn-dedupe">Remove duplicates</button>
+          <button class="btn sm danger" id="btn-clear">Clear</button>
+        </div>
+      </div>
+      <textarea id="alphaText" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="rank(-ts_delta(close, 5))&#10;-rank(ts_std_dev(returns, 20))&#10;&#10;Paste your expressions here, one per line."></textarea>
+      <div class="stat-line"><span><b id="c-alphas" class="num">0</b> alphas</span><span class="muted" id="c-dupes"></span></div>
+      <div id="issues" class="lint hidden"></div>
+    </div>
+
+    <div class="stack">
+      <details class="card fold" id="tpl-card" open>
+        <summary><h3>Generate from a template</h3></summary>
+        <p class="hint" style="margin-bottom:12px">Anything in {curly braces} becomes a list. Tap <b>Fill</b> to use a ready-made list, a list you saved, or every field in a BRAIN data category, which stays synced to your market.</p>
+        <div class="field"><label for="tpl-preset">Start from</label><select id="tpl-preset"></select></div>
+        <div class="field"><label for="tpl">Template</label><input type="text" id="tpl" class="mono" spellcheck="false" autocapitalize="off" autocomplete="off"></div>
+        <div class="phs" id="phs"></div>
+        <div class="cols">
+          <div class="field"><label for="tpl-mode">How many</label><select id="tpl-mode"><option value="all">Every combination</option><option value="sample">A random sample</option></select></div>
+          <div class="field hidden" id="tpl-n-wrap"><label for="tpl-n">Sample size</label><input type="number" id="tpl-n" min="1" value="100" inputmode="numeric"></div>
+        </div>
+        <div class="preview" id="tpl-preview"></div>
+        <div class="row between" style="margin-top:12px">
+          <span class="small muted" id="tpl-count"></span>
+          <button class="btn primary" id="btn-tpl-add">Add to my list</button>
+        </div>
+        <p class="hint" style="margin-top:12px">Looking for one field? The <a href="#" data-goto="explore">Data explorer</a> has "Use in template" next to every field.</p>
+      </details>
+
+      <details class="card fold" id="ai-card">
+        <summary><h3>Generate with AI</h3><span class="small muted" id="ai-sum"></span></summary>
+        <p class="hint" style="margin-bottom:12px">Use your own key from OpenAI, Anthropic, Google or any OpenAI-compatible service. The app gives the AI the real data fields and operators for your market, and keeps only expressions that use them.</p>
+        <div class="field"><label for="ai-provider">AI service</label><select id="ai-provider"></select></div>
+        <div class="field hidden" id="ai-base-wrap"><label for="ai-base">Address (base URL)</label>
+          <div class="row nowrap"><input type="text" id="ai-base" class="mono" autocapitalize="off" autocomplete="off" placeholder="https://.../v1"><select id="ai-preset" aria-label="Known services" style="width:auto;max-width:42%"></select></div></div>
+        <div class="field"><label for="ai-key">API key</label>
+          <div class="row nowrap"><input type="password" id="ai-key" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste your key"><button class="btn sm" id="ai-key-show" type="button">Show</button></div>
+          <label class="check" style="margin-top:6px"><input type="checkbox" id="ai-remember"><span class="hint">Remember the key on this device (kept privately inside the app)</span></label></div>
+        <div class="field"><label for="ai-model">Model</label>
+          <div class="row nowrap"><input type="text" id="ai-model" class="mono" list="ai-models" autocapitalize="off" autocomplete="off"><button class="btn sm" id="ai-load-models" type="button">Load models</button></div>
+          <datalist id="ai-models"></datalist>
+          <select id="ai-model-list" class="hidden" aria-label="Models from your account" style="margin-top:6px"></select></div>
+        <div class="field"><span class="lbl">Market</span>
+          <div class="cols3"><select id="ai-region" aria-label="Region"></select><select id="ai-universe" aria-label="Universe"></select><select id="ai-delay" aria-label="Delay"></select></div></div>
+        <div class="field"><span class="lbl">Data</span>
+          <div class="row between nowrap"><span class="small" id="ai-data-sum">Not chosen yet</span><button class="btn sm" id="ai-data-btn" type="button">Choose data</button></div></div>
+        <div class="field"><label for="ai-idea">Idea or style (optional)</label><textarea id="ai-idea" rows="2" placeholder="e.g. earnings revisions with low turnover, or mean reversion after news"></textarea></div>
+        <div class="cols">
+          <div class="field"><label for="ai-count">How many expressions</label><input type="number" id="ai-count" min="1" value="50" inputmode="numeric"></div>
+          <div class="field"><label for="ai-batch">Per AI request</label><input type="number" id="ai-batch" min="5" max="50" value="20" inputmode="numeric"></div>
+        </div>
+        <label class="check" style="margin-bottom:8px"><input type="checkbox" id="ai-strict"><span><span class="t">Only keep expressions that use the chosen data</span><br><span class="hint">Drops lines with made-up fields or operators.</span></span></label>
+        <label class="check" style="margin-bottom:12px"><input type="checkbox" id="ai-switch"><span class="t">Use this market in Settings</span></label>
+        <div class="row"><button class="btn primary" id="ai-go" type="button">Generate</button><button class="btn hidden" id="ai-stop" type="button">Stop</button></div>
+        <div class="bar hidden" id="ai-bar" style="margin-top:10px"><b style="width:0"></b></div>
+        <p class="small muted" id="ai-status" style="margin-top:6px"></p>
+        <div class="preview hidden" id="ai-preview"></div>
+        <p class="hint" style="margin-top:10px">Your key goes only to the service you picked. The AI provider bills you for what you use.</p>
+      </details>
+    </div>
+  </div>
+
+  <div id="mode-super" class="grid-2 hidden">
+    <div class="card">
+      <h3>Super alphas</h3>
+      <p class="hint" style="margin:4px 0 12px">A super alpha combines alphas you already submitted. The <b>selection</b> expression picks which ones, the <b>combo</b> expression weights them. Every selection is paired with every combo.</p>
+      <div class="field"><label for="sa-sel">Selection expressions (one per line)</label>
+        <textarea id="sa-sel" rows="5" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder='name == "my_tag"'></textarea></div>
+      <div class="field"><label for="sa-combo">Combo expressions (one per line)</label>
+        <textarea id="sa-combo" rows="5" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="1"></textarea></div>
+      <div class="stat-line"><span><b id="sa-count" class="num">0</b> super alphas</span><span class="muted" id="sa-note"></span></div>
+      <div id="sa-issues" class="lint hidden"></div>
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:12px">Super alpha options</h3>
+      <div class="cols">
+        <div class="field"><label for="sa-handling">Selection handling</label><select id="sa-handling"><option>POSITIVE</option><option>NON_ZERO</option><option>NON_NAN</option></select>
+          <span class="hint">Which selection values count as "pick this alpha".</span></div>
+        <div class="field"><label for="sa-limit">Selection limit</label><input type="number" id="sa-limit" min="1" value="20" inputmode="numeric">
+          <span class="hint">The most alphas one super alpha may combine.</span></div>
+      </div>
+      <p class="hint">Market, decay, neutralization and truncation come from <a href="#" data-goto="settings">Settings</a>, and tick several decays or neutralizations to compare them. Results show up under Run with a SUPER tag, and you can check and submit them like any alpha.</p>
+      <p class="hint" style="margin-top:8px">The selection and combo syntax available to you is described in BRAIN's SuperAlpha documentation. A common start: give the alphas you want a shared name on BRAIN, select them by that name, and use a combo of 1 for equal weights.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section id="view-settings" class="hidden">
+  <div class="view-head"><h2>Simulation settings</h2>
+    <p>The defaults are a sensible starting point (USA, top 3000 stocks, industry-neutral). Change only what you need.</p></div>
+  <div class="row" style="margin-bottom:14px;gap:6px"><span class="muted small">Quick presets:</span>
+    <button class="btn sm" data-preset="beginner">Beginner default</button>
+    <button class="btn sm" data-preset="decay">Compare decay 0 / 4 / 8</button>
+    <button class="btn sm" data-preset="neut">Compare neutralizations</button>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h3 style="margin-bottom:14px">Market &amp; behaviour</h3>
+      <div class="cols">
+        <div class="field"><label for="s-region">Region</label><select id="s-region"></select><span class="hint">Which stock market.</span></div>
+        <div class="field"><label for="s-universe">Universe</label><select id="s-universe"></select><span class="hint">Which stocks. TOP3000 = the 3,000 most traded.</span></div>
+        <div class="field"><label for="s-delay">Delay</label><select id="s-delay"></select><span class="hint">1 = trade the day after the signal (standard).</span></div>
+      </div>
+      <div class="field"><span class="lbl">Neutralization</span><div class="seg" id="s-neut"></div>
+        <span class="hint">Removes market, sector or industry bets so the alpha must pick stocks. Tick several to test each one.</span></div>
+      <div class="cols">
+        <div class="field"><label for="s-decay">Decay (days)</label><input type="text" id="s-decay" inputmode="numeric"><span class="hint">Smooths the signal; higher means calmer trading. Type several: 0, 4, 8.</span></div>
+        <div class="field"><label for="s-trunc">Truncation</label><input type="number" id="s-trunc" step="0.01" min="0" max="1" inputmode="decimal"><span class="hint">Largest weight one stock may have (0.08 = 8%).</span></div>
+      </div>
+      <details class="adv"><summary>Advanced</summary>
+        <div class="cols" style="margin-top:12px">
+          <div class="field"><label for="s-past">Pasteurization</label><select id="s-past"><option>ON</option><option>OFF</option></select></div>
+          <div class="field"><label for="s-nan">NaN handling</label><select id="s-nan"><option>OFF</option><option>ON</option></select></div>
+          <div class="field"><label for="s-unit">Unit handling</label><select id="s-unit"><option>VERIFY</option></select></div>
+          <div class="field"><label for="s-maxtrade">Max trade</label><select id="s-maxtrade"><option>OFF</option><option>ON</option></select></div>
+          <div class="field"><label for="s-test">Test period</label><input type="text" id="s-test" class="mono" autocapitalize="characters"><span class="hint">P0Y0M0D = none. P2Y holds back 2 years.</span></div>
+        </div>
+      </details>
+      <p class="hint" id="opt-src" style="margin-top:10px"></p>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:14px">How to run</h3>
+      <div class="field"><label for="o-workers">Parallel simulations: <b id="o-workers-v">3</b></label>
+        <input type="range" id="o-workers" min="1" max="8" step="1">
+        <span class="hint">How many alphas BRAIN tests at once. 3 is safe. If BRAIN says you're over the limit, the app waits and retries by itself.</span></div>
+      <label class="check" style="margin-bottom:14px"><input type="checkbox" id="o-multi"><span><span class="t">Speed boost: send alphas in groups</span><br><span class="hint">Uses BRAIN's multi-simulation (up to 10 alphas per request). Faster for big lists.</span></span></label>
+      <label class="check" style="margin-bottom:14px"><input type="checkbox" id="o-skip"><span><span class="t">Skip alphas I already simulated</span><br><span class="hint">Same expression + same settings is never run twice.
+        <a href="#" id="forget">Forget my history</a></span></span></label>
+      <label class="check" style="margin-bottom:14px"><input type="checkbox" id="o-deep"><span><span class="t">Run full submission checks on good alphas</span><br><span class="hint">Adds self- and production-correlation. Slower.</span></span></label>
+      <label class="check" style="margin-bottom:14px"><input type="checkbox" id="o-color"><span><span class="t">Colour good alphas on BRAIN</span><br><span class="hint">Green = good. Yellow = failed some checks but promising (Sharpe above 0.7). Changes your alphas on the platform.</span></span></label>
+      <div class="cols">
+        <div class="field"><label for="o-sharpe">"Good" needs Sharpe of</label><input type="number" id="o-sharpe" step="0.05" inputmode="decimal"></div>
+        <div class="field"><label for="o-fit">and Fitness of</label><input type="number" id="o-fit" step="0.05" inputmode="decimal"></div>
+      </div>
+      <span class="hint">An alpha is marked Good when it fails no checks and reaches both numbers.</span>
+    </div>
+  </div>
+</section>
+
+<!-- RUN -->
+<section id="view-run" class="hidden">
+  <div class="view-head row between"><div><h2>Run &amp; results</h2>
+    <p id="run-sub">Results appear here as BRAIN finishes each simulation, and are saved automatically.</p></div>
+    <div class="row">
+      <button class="btn" id="btn-pause">Pause</button>
+      <button class="btn danger" id="btn-stop">Stop</button>
+    </div></div>
+  <div class="tiles">
+    <div class="tile"><div class="v num" id="t-done">0</div><div class="l" id="t-of">of 0 finished</div></div>
+    <div class="tile good"><div class="v num" id="t-good">0</div><div class="l">Good</div></div>
+    <div class="tile"><div class="v num" id="t-passed">0</div><div class="l">Passed checks</div></div>
+    <div class="tile warn"><div class="v num" id="t-issues">0</div><div class="l">Failed some checks</div></div>
+    <div class="tile bad"><div class="v num" id="t-error">0</div><div class="l">Errors</div></div>
+    <div class="tile"><div class="v num" id="t-time">0:00</div><div class="l" id="t-eta">elapsed</div></div>
+  </div>
+  <div class="bar" id="pbar"><b style="width:0"></b></div>
+
+  <div class="filters">
+    <div class="pills">
+      <button class="pill" data-f="all" aria-pressed="true">All<span class="n" id="n-all">0</span></button>
+      <button class="pill" data-f="good" aria-pressed="false">Good<span class="n" id="n-good">0</span></button>
+      <button class="pill" data-f="passed" aria-pressed="false">Passed<span class="n" id="n-passed">0</span></button>
+      <button class="pill" data-f="issues" aria-pressed="false">Issues<span class="n" id="n-issues">0</span></button>
+      <button class="pill" data-f="error" aria-pressed="false">Errors<span class="n" id="n-error">0</span></button>
+    </div>
+    <input type="text" id="q" placeholder="Search expressions" aria-label="Search expressions" autocapitalize="off">
+    <select id="sort-sel" aria-label="Sort results">
+      <option value="fitness:-1">Sort: best fitness</option>
+      <option value="sharpe:-1">Sort: best Sharpe</option>
+      <option value="returns:-1">Sort: highest returns</option>
+      <option value="turnover:1">Sort: lowest turnover</option>
+      <option value="drawdown:1">Sort: smallest drawdown</option>
+      <option value="margin:-1">Sort: highest margin</option>
+      <option value="n:-1">Sort: newest first</option>
+      <option value="n:1">Sort: oldest first</option>
+    </select>
+    <span class="spacer" style="flex:1"></span>
+    <button class="btn sm" id="btn-copy-good">Copy good expressions</button>
+    <button class="btn sm" id="btn-save-csv">Save CSV</button>
+    <button class="btn sm android-only" id="btn-share-csv">Share</button>
+  </div>
+  <div class="tbl-wrap" id="tbl-wrap">
+    <table id="res-table" class="cards">
+      <thead><tr id="thead"></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="empty"><h3>No results yet</h3><p>Add some alphas, then press Start simulating.</p></div>
+  </div>
+  <p class="hint" id="tbl-note" style="margin-top:6px"></p>
+  <details style="margin-top:14px"><summary class="muted" style="cursor:pointer">Activity log</summary><div id="log"></div></details>
+</section>
+
+<!-- EXPLORER -->
+<section id="view-explore" class="hidden">
+  <div class="view-head"><h2>Data explorer</h2>
+    <p>Find the data fields and operators you can use. Showing <b id="ex-ctx"></b> (change it in Settings).</p></div>
+  <div class="subtabs">
+    <button class="pill" data-x="fields" aria-pressed="true">Data fields</button>
+    <button class="pill" data-x="datasets" aria-pressed="false">Datasets</button>
+    <button class="pill" data-x="ops" aria-pressed="false">Operators</button>
+  </div>
+  <div id="x-fields">
+    <div class="explore-bar"><input type="search" id="f-q" placeholder="Search fields, e.g. close, sentiment" aria-label="Search fields" autocapitalize="off" enterkeyhint="search"><button class="btn primary" id="f-go">Search</button>
+      <span id="f-ds" class="badge hidden"></span><button class="btn sm hidden" id="f-ds-clear">Clear dataset</button></div>
+    <div class="tbl-wrap"><table id="f-table" class="cards"><thead><tr><th>Field</th><th>Description</th><th>Dataset</th><th>Type</th><th class="r">Coverage</th><th class="r">Alphas</th><th></th></tr></thead><tbody id="f-body"></tbody></table><div class="empty" id="f-empty">Search to list fields.</div></div>
+    <div class="row" style="margin-top:10px"><button class="btn hidden" id="f-more">Load more</button><span class="hint" id="f-note"></span></div>
+    <p class="hint" style="margin-top:8px"><span class="badge vec">VECTOR</span> fields hold several values per stock per day. They must be wrapped, for example with vec_avg(), which "Use in template" does for you.</p>
+  </div>
+  <div id="x-datasets" class="hidden">
+    <div class="explore-bar"><input type="search" id="d-q" placeholder="Search datasets" aria-label="Search datasets" autocapitalize="off" enterkeyhint="search"><button class="btn primary" id="d-go">Search</button></div>
+    <div class="tbl-wrap"><table id="d-table" class="cards"><thead><tr><th>Dataset</th><th>Name</th><th>Category</th><th class="r">Fields</th><th class="r">Coverage</th><th></th></tr></thead><tbody id="d-body"></tbody></table><div class="empty" id="d-empty">Search to list datasets.</div></div>
+  </div>
+  <div id="x-ops" class="hidden">
+    <div class="explore-bar"><input type="search" id="o-q" placeholder="Filter operators" aria-label="Filter operators" autocapitalize="off"><select id="o-cat" style="max-width:200px"><option value="">All categories</option></select></div>
+    <div class="tbl-wrap"><table id="o-table" class="cards"><thead><tr><th>Operator</th><th>Category</th><th>Definition</th><th>What it does</th></tr></thead><tbody id="o-body"></tbody></table><div class="empty" id="o-empty">Loading...</div></div>
+  </div>
+</section>
+
+<!-- HELP -->
+<section id="view-help" class="hidden">
+  <div class="view-head"><h2>Help</h2><p>New to BRAIN? Start here.</p></div>
+  <div class="help-grid">
+    <div class="card"><h3>Quick start</h3>
+      <ol class="how">
+        <li><b>Alphas.</b> Paste expressions (one per line) or build many from a template.</li>
+        <li><b>Settings.</b> Keep the defaults, or pick another market. Tick several decay or neutralization values to compare them.</li>
+        <li><b>Start simulating.</b> Watch results arrive. Tap any result for details and a PnL chart.</li>
+      </ol>
+      <p class="hint" style="margin-top:14px">Your settings, alpha list and history are saved inside the app automatically. When a run ends, its results are also saved as a CSV in <b>Downloads/BrainAutoSim</b> (Android 10 and newer). Use <b>Share</b> to send them anywhere.</p></div>
+    <div class="card"><h3>What the numbers mean</h3><dl style="margin:0">
+      <dt>Sharpe</dt><dd>Return per unit of risk. Higher is better; BRAIN usually wants above 1.25 to submit.</dd>
+      <dt>Fitness</dt><dd>Sharpe adjusted for returns and turnover. Usually needs above 1.</dd>
+      <dt>Turnover</dt><dd>How much the portfolio changes each day. Very high costs money, very low is suspicious.</dd>
+      <dt>Returns, Drawdown</dt><dd>Yearly profit, and the worst peak-to-trough loss.</dd>
+      <dt>Margin</dt><dd>Profit per dollar traded, in basis points of a basis point (‱).</dd></dl></div>
+    <div class="card"><h3>Settings in plain words</h3><dl style="margin:0">
+      <dt>Universe</dt><dd>The pool of stocks. TOP3000 is the 3,000 most traded US stocks.</dd>
+      <dt>Delay</dt><dd>1 means you trade the day after you see the data. That is the standard.</dd>
+      <dt>Neutralization</dt><dd>Cancels out market, sector or industry moves, so your idea has to stand on its own.</dd>
+      <dt>Decay</dt><dd>Averages the signal over recent days to reduce turnover.</dd>
+      <dt>Truncation</dt><dd>Caps how much one stock can weigh.</dd></dl></div>
+    <div class="card"><h3>More ways to make alphas</h3><dl style="margin:0">
+      <dt>Template Fill</dt><dd>Next to each {placeholder}, tap Fill. Use a ready-made list, save your own lists, or take every field of a BRAIN data category (filter by type, coverage and popularity). Synced fields download again by themselves when you change market. Pick "A random sample" to generate any number of expressions from huge combinations.</dd>
+      <dt>Generate with AI</dt><dd>Paste a key from OpenAI, Anthropic, Google Gemini or an OpenAI-compatible service (OpenRouter, Groq, DeepSeek, Mistral...). Tap Load models to see what your key can use, choose the market and data, and say how many expressions you want.</dd>
+      <dt>Super alphas</dt><dd>Switch the Alphas screen to "Super alphas", write selection and combo expressions, and start. Every pairing is simulated with your Settings.</dd>
+      <dt>Check and submit</dt><dd>Tap any result. "Check submission" runs BRAIN's full checks including correlation; "Submit alpha" sends it to BRAIN after you confirm. Submitting can't be undone and BRAIN limits submissions per day.</dd></dl></div>
+    <div class="card"><h3>Running on your phone</h3><dl style="margin:0">
+      <dt>Screen off or another app</dt><dd>While a run is going, a notification shows its progress and the app keeps working in the background. Allow notifications when asked.</dd>
+      <dt>A run pauses in the background</dt><dd>Some phones close background apps to save battery. Set Brain AutoSim's battery use to "Unrestricted" (or "Don't optimise").
+        <span class="android-only"><br><button class="btn sm" id="btn-battery" style="margin-top:6px">Open battery settings</button></span></dd>
+      <dt>Back button</dt><dd>Closes the details panel, then goes back to your alpha list. Leaving the app during a run keeps it running.</dd></dl></div>
+    <div class="card"><h3>If something goes wrong</h3><dl style="margin:0">
+      <dt>"Incorrect email or password"</dt><dd>Use the same details as on the BRAIN website. No spaces at the end.</dd>
+      <dt>Biometric step</dt><dd>BRAIN may ask you to confirm your identity. The app opens the link in your browser; finish the check there, come back and tap "I've done it".</dd>
+      <dt>"unknown variable" error</dt><dd>That field doesn't exist for your region, universe or delay. Look it up in the Data explorer.</dd>
+      <dt>"limit reached" in the log</dt><dd>Normal. BRAIN limits parallel runs, so the app waits and retries. Lower Parallel simulations if it keeps happening.</dd>
+      <dt>Stop</dt><dd>Stop finishes what is already sent. Tap it twice to stop right now.</dd></dl></div>
+  </div>
+</section>
+</main>
+
+<div id="actionbar" class="hidden"><div class="ab-in">
+  <div id="ab-sum"></div>
+  <div class="row" style="flex-wrap:nowrap"><span class="muted small" id="ab-note"></span>
+    <button class="btn primary big" id="btn-start">Start simulating</button></div>
+</div></div>
+
+<div id="scrim"></div>
+<aside id="drawer" aria-label="Alpha details"></aside>
+<div id="toasts" role="status" aria-live="polite"></div>
+
+<dialog id="bio"><h3>One more step from BRAIN</h3>
+  <p style="margin:10px 0">BRAIN wants to confirm it's you (face or ID check). Open the link, finish the check in your browser, then come back here.</p>
+  <p><a id="bio-link" href="#" target="_blank" rel="noopener" class="btn">Open the check</a></p>
+  <div id="bio-err" class="err hidden" style="margin-top:12px"></div>
+  <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" id="bio-cancel">Cancel</button><button class="btn primary" id="bio-done">I've done it</button></div>
+</dialog>
+
+<dialog id="fill" class="sheet" aria-labelledby="fill-title">
+  <div class="row between nowrap" style="margin-bottom:10px"><h3 id="fill-title">Fill</h3><button class="btn sm" id="fill-close" type="button">Close</button></div>
+  <div class="subtabs" id="fill-tabs">
+    <button class="pill" data-ft="lists" aria-pressed="true" type="button">Lists</button>
+    <button class="pill" data-ft="data" aria-pressed="false" type="button">BRAIN data fields</button>
+  </div>
+  <div id="ft-lists">
+    <div class="lists" id="fill-lists"></div>
+    <div class="field"><label for="fill-save-name">Save the current values as a list</label>
+      <div class="row nowrap"><input type="text" id="fill-save-name" placeholder="List name, e.g. My windows"><button class="btn sm" id="fill-save" type="button">Save</button></div></div>
+    <p class="small muted" id="fill-msg"></p>
+  </div>
+  <div id="ft-data" class="hidden">
+    <p class="hint" style="margin-bottom:10px">Market: <b id="fd-ctx"></b></p>
+    <div class="field"><label for="fd-cat">Category</label><select id="fd-cat"></select></div>
+    <div class="field"><div class="row between nowrap"><span class="lbl">Datasets</span><button class="btn sm ghost" id="fd-all" type="button">All / none</button></div>
+      <div class="checklist" id="fd-ds"></div></div>
+    <div class="cols">
+      <div class="field wide"><span class="lbl">Field types</span><div class="seg" id="fd-types">
+        <label><input type="checkbox" value="MATRIX"><span>MATRIX</span></label><label><input type="checkbox" value="VECTOR"><span>VECTOR</span></label><label><input type="checkbox" value="GROUP"><span>GROUP</span></label></div></div>
+      <div class="field"><label for="fd-cov">Min coverage %</label><input type="number" id="fd-cov" min="0" max="100" inputmode="numeric"></div>
+      <div class="field"><label for="fd-sort">Order</label><select id="fd-sort"><option value="popular">Most used first</option><option value="coverage">Best coverage first</option><option value="name">A to Z</option><option value="random">Random</option></select></div>
+      <div class="field"><label for="fd-max">How many fields (0 = all)</label><input type="number" id="fd-max" min="0" inputmode="numeric"></div>
+      <div class="field"><label for="fd-vec">Wrap VECTOR fields in</label><select id="fd-vec"><option>vec_avg</option><option>vec_sum</option><option>vec_max</option><option>vec_min</option></select></div>
+      <div class="field"><label for="fd-q">Name or description contains</label><input type="text" id="fd-q" autocapitalize="off" autocomplete="off"></div>
+    </div>
+    <label class="check" style="margin-bottom:6px"><input type="checkbox" id="fd-refresh"><span class="hint">Download fresh from BRAIN (otherwise fields saved in the last 7 days are reused)</span></label>
+    <label class="check" id="fd-link-wrap" style="margin-bottom:12px"><input type="checkbox" id="fd-link" checked><span class="hint">Keep synced: download again for the new market when I change Settings</span></label>
+    <div class="row"><button class="btn primary" id="fd-go" type="button">Sync &amp; fill</button><button class="btn hidden" id="fd-stop" type="button">Stop</button></div>
+    <p class="small muted" id="fd-status" style="margin-top:8px"></p>
+  </div>
+</dialog>
+
+<script src="platform.js"></script>
+<script src="engine.js"></script>
+<script>
+"use strict";
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const api = (path, body) => Engine.api(path, body);
+const narrow = () => window.matchMedia("(max-width:760px)").matches;
+function toast(msg, bad){ const d=document.createElement("div"); d.className="toast"+(bad?" bad":""); d.textContent=msg; $("#toasts").append(d); setTimeout(()=>d.remove(), bad?7000:3500); }
+async function copy(text, what){
+  if(Platform.copyText(text)){ toast("Copied "+(what||"")); return; }
+  try{ await navigator.clipboard.writeText(text); toast("Copied "+(what||"")); }
+  catch(e){ const t=document.createElement("textarea"); t.value=text; document.body.append(t); t.select(); document.execCommand("copy"); t.remove(); toast("Copied "+(what||"")); } }
+
+/* ------------------------------------------------------------------ phone shell */
+if(Platform.isAndroid) document.documentElement.classList.add("android");
+window.__setInsets = (top, bottom) => { const s=document.documentElement.style; s.setProperty("--sat", (+top||0)+"px"); s.setProperty("--sab", (+bottom||0)+"px"); };
+window.__setInsets(...Platform.insets());
+// Links to BRAIN (alpha pages, the biometric check) open in the phone's browser.
+document.addEventListener("click", e=>{ const a=e.target.closest('a[href^="http"]'); if(!a) return; e.preventDefault(); Platform.openUrl(a.href); });
+// Android back button: close what's open, then go back to the alpha list, then leave the app.
+window.__onBack = () => {
+  if($("#fill").open){ $("#fill").close(); return true; }
+  if($("#bio").open){ $("#bio").close(); return true; }
+  if($("#drawer").classList.contains("on")){ closeDrawer(); return true; }
+  if(S.view!=="login" && S.view!=="alphas"){ show("alphas"); return true; }
+  return false;
+};
+
+/* ------------------------------------------------------------------ state */
+const DEFAULT_SETTINGS = {region:"USA", universe:"TOP3000", delay:1, neutralizations:["INDUSTRY"], decays:"0", truncation:0.08,
+  pasteurization:"ON", nanHandling:"OFF", unitHandling:"VERIFY", maxTrade:"OFF", testPeriod:"P0Y0M0D"};
+const DEFAULT_OPTS = {workers:3, multi:false, batch:10, skipDone:true, deepChecks:false, colorTag:false, minSharpe:1.25, minFitness:1.0};
+const EXAMPLES = ["rank(-ts_delta(close, 5))","-rank(ts_std_dev(returns, 20))","rank(ts_rank(volume, 20))","-ts_corr(close, volume, 10)",
+  "group_rank(ts_zscore(close, 20), industry)","-rank(ts_zscore(vwap, 10))","rank(ts_delta(volume, 5)) * -rank(ts_delta(close, 5))"];
+const PRESETS = {
+  "Momentum":{t:"rank(ts_delta({field}, {days}))", v:{field:"close, vwap", days:"5, 10, 20"}},
+  "Reversal (z-score)":{t:"-rank(ts_zscore({field}, {days}))", v:{field:"close, returns", days:"5, 10, 20, 60"}},
+  "Low volatility":{t:"-rank(ts_std_dev({field}, {days}))", v:{field:"returns, volume", days:"10, 20, 60"}},
+  "Price vs volume correlation":{t:"-ts_corr({field}, {field2}, {days})", v:{field:"close, vwap", field2:"volume, adv20", days:"10, 20"}},
+  "Industry-relative rank":{t:"group_rank(ts_rank({field}, {days}), {group})", v:{field:"close, volume", days:"10, 60", group:"industry, sector"}},
+  "Fundamental ratio":{t:"rank(divide({field}, {field2}))", v:{field:"ebitda, net_income, sales", field2:"assets, cap"}},
+  "Blank template":{t:"", v:{}},
+};
+const DEFAULT_SPEC = {category:"", datasets:[], types:["MATRIX","VECTOR"], minCoverage:0.3, sort:"popular", max:0, vecOp:"vec_avg", search:""};
+const SA_DEFAULT = {sel:"", combo:"", handling:"POSITIVE", limit:20};
+const AI_DEFAULT = {provider:"openai", base:"", key:"", remember:true, model:"", region:"", universe:"", delay:"", spec:{...DEFAULT_SPEC, max:150},
+  idea:"", count:50, batch:20, strict:true, switchMarket:true};
+const S = { session:null, optsData:null, settings:{...DEFAULT_SETTINGS}, opts:{...DEFAULT_OPTS},
+  tpl:{t:PRESETS["Momentum"].t, v:{...PRESETS["Momentum"].v}, src:{}, mode:"all", n:100},
+  mode:"regular", sa:{...SA_DEFAULT}, ai:{...AI_DEFAULT, spec:{...AI_DEFAULT.spec}}, lists:[],
+  view:"login", rid:-1, rowCur:0, logCur:0, rows:[], run:null, filter:"all", q:"", sort:{key:"fitness",dir:-1}, prevStatus:"idle",
+  ex:{tab:"fields", dataset:"", offset:0, opsLoaded:false, ops:[]}, drawerRow:null };
+const isBusy = st => !!st && ["running","paused","stopping"].includes(st.status);
+
+/* ------------------------------------------------------------- navigation */
+function show(view){
+  S.view = view;
+  for(const v of ["login","alphas","settings","run","explore","help"]) $("#view-"+v).classList.toggle("hidden", v!==view);
+  $$("#nav button").forEach(b=>{ if(b.dataset.view===view) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
+  document.body.classList.toggle("no-nav", view==="login");
+  if(view==="explore") enterExplore();
+  if(view==="run") renderTable();
+  updateBar(); window.scrollTo(0,0);
+}
+$$("#nav button").forEach(b=>b.onclick=()=>show(b.dataset.view));
+document.addEventListener("click", e=>{ const a=e.target.closest("[data-goto]"); if(a){ e.preventDefault(); show(a.dataset.goto); }});
+
+/* ----------------------------------------------------------------- config */
+let saveTimer=null;
+function writeCfg(){ clearTimeout(saveTimer); saveTimer=null; if(!S.session) return;
+  const ai={...S.ai}; if(!ai.remember) ai.key="";
+  api("/api/config", {settings:S.settings, runopts:S.opts, alphas:$("#alphaText").value, template:S.tpl, mode:S.mode, super:S.sa, ai, lists:S.lists}).catch(()=>{}); }
+function saveCfg(){ clearTimeout(saveTimer); saveTimer=setTimeout(writeCfg, 600); }
+// Leaving the app (home button, another app, screen off): save right away instead of waiting.
+document.addEventListener("visibilitychange", ()=>{ if(document.hidden && saveTimer) writeCfg(); });
+window.addEventListener("pagehide", ()=>{ if(saveTimer) writeCfg(); });
+
+/* ------------------------------------------------------------------ login */
+function loginError(m){ const e=$("#login-err"); e.textContent=m; e.classList.toggle("hidden", !m); }
+async function doLogin(demo){
+  loginError(""); const btn=$("#btn-login"); btn.disabled=true; $("#btn-demo").disabled=true; if(!demo) btn.textContent="Signing in...";
+  try{
+    const body = demo ? {demo:true} : {email:$("#email").value, password:$("#password").value, use_saved:!$("#password").value && S.hasSaved,
+      remember_password:$("#rem-pass").checked};
+    const r = await api("/api/login", body);
+    if(r.biometric_url){ openBio(r.biometric_url, body); return; }
+    if(!demo && !$("#rem-email").checked) api("/api/config", {email:""}).catch(()=>{});
+    $("#password").value="";
+    await afterLogin();
+  }catch(e){ loginError(e.message); }
+  finally{ btn.disabled=false; $("#btn-demo").disabled=false; btn.textContent="Sign in"; }
+}
+function openBio(url, body){
+  $("#bio-link").href=url; $("#bio-err").classList.add("hidden"); $("#bio").showModal();
+  $("#bio-done").onclick = async ()=>{ const b=$("#bio-done"); b.disabled=true;
+    try{ await api("/api/biometric", {remember_password:body.remember_password}); $("#bio").close(); $("#password").value=""; await afterLogin(); }
+    catch(e){ const x=$("#bio-err"); x.textContent=e.message; x.classList.remove("hidden"); }
+    finally{ b.disabled=false; } };
+  $("#bio-cancel").onclick = ()=>$("#bio").close();
+}
+$("#login-form").onsubmit = e=>{ e.preventDefault(); doLogin(false); };
+$("#btn-demo").onclick = ()=>doLogin(true);
+$("#btn-logout").onclick = async ()=>{ if(isBusy(S.run) && !confirm("A run is in progress. Sign out anyway?")) return;
+  await api("/api/logout", {}); S.session=null; $("#nav").classList.add("hidden"); $("#who").classList.add("hidden"); $("#demo-banner").classList.add("hidden"); show("login"); };
+
+async function afterLogin(){
+  S.session = await api("/api/session");
+  $("#nav").classList.remove("hidden"); $("#who").classList.remove("hidden");
+  $("#who-email").textContent = S.session.email; $("#demo-banner").classList.toggle("hidden", !S.session.demo);
+  S.optsData = null;
+  try{ S.optsData = await api("/api/options"); }catch(e){ toast("Couldn't load the settings list: "+e.message, true); }
+  const st = await api("/api/state?rid=-1&rows=0&logs=0"); S.rid = -1; S.rows=[]; applyState(st);
+  buildSettings(); buildAi(); setMode(S.mode, true); show(st.total>0 && isBusy(st) ? "run" : "alphas");
+}
+
+/* ----------------------------------------------------------------- alphas */
+function exprList(){
+  const seen=new Set(), out=[]; let dupes=0;
+  for(const raw of $("#alphaText").value.split(/\r?\n/)){ const l=raw.trim(); if(!l || l.startsWith("#")) continue;
+    if(seen.has(l)){ dupes++; continue; } seen.add(l); out.push(l); }
+  return {list:out, dupes};
+}
+function lineIssues(){
+  const out=[]; $("#alphaText").value.split(/\r?\n/).forEach((raw,i)=>{ const l=raw.trim(); if(!l||l.startsWith("#")) return;
+    const o=(l.match(/\(/g)||[]).length, c=(l.match(/\)/g)||[]).length;
+    if(o!==c) out.push(`Line ${i+1}: ${o>c?"missing )":"extra )"}`);
+    else if(/[{}]/.test(l)) out.push(`Line ${i+1}: has a {placeholder} that was never filled in`); });
+  return out;
+}
+function refreshAlphas(){
+  const {list,dupes}=exprList(); $("#c-alphas").textContent=list.length;
+  $("#c-dupes").textContent = dupes ? `${dupes} duplicate${dupes>1?"s":""} will be skipped` : "";
+  const iss=lineIssues(), box=$("#issues"); box.classList.toggle("hidden", !iss.length);
+  box.innerHTML = iss.length ? "<b>Check these lines:</b><br>"+iss.slice(0,12).map(esc).join("<br>")+(iss.length>12?`<br>...and ${iss.length-12} more`:"") : "";
+  updateBar(); saveCfg();
+}
+$("#alphaText").addEventListener("input", refreshAlphas);
+function appendLines(lines){ const t=$("#alphaText"); const have=new Set(t.value.split(/\r?\n/).map(s=>s.trim())); const add=lines.filter(l=>!have.has(l));
+  t.value = (t.value.trim()? t.value.replace(/\s*$/,"\n") : "") + add.join("\n") + (add.length?"\n":""); refreshAlphas(); return add.length; }
+$("#btn-examples").onclick = ()=>{ const n=appendLines(EXAMPLES); toast(n?`Added ${n} example alphas`:"Examples are already in your list"); };
+$("#btn-clear").onclick = ()=>{ if($("#alphaText").value.trim() && !confirm("Remove all alphas from the list?")) return; $("#alphaText").value=""; refreshAlphas(); };
+$("#btn-dedupe").onclick = ()=>{ const {list,dupes}=exprList(); $("#alphaText").value=list.join("\n")+(list.length?"\n":""); refreshAlphas(); toast(dupes?`Removed ${dupes} duplicates`:"No duplicates found"); };
+$("#file-in").onchange = async e=>{ const f=e.target.files[0]; if(!f) return;
+  try{ const txt=await f.text(); let lines=txt.replace(/^﻿/,"").split(/\r?\n/);
+    if(/\.(csv|tsv)$/i.test(f.name)){ const sep=/\.tsv$/i.test(f.name)?"\t":","; const rows=lines.filter(Boolean).map(l=>l.split(sep).map(x=>x.replace(/^"|"$/g,"")));
+      const head=(rows[0]||[]).map(h=>h.toLowerCase()); let col=head.findIndex(h=>["expression","code","regular","alpha"].includes(h)); const hasHead=col>=0; if(col<0) col=0;
+      lines=rows.slice(hasHead?1:0).map(r=>r[col]).filter(Boolean); }
+    const n=appendLines(lines.map(s=>s.trim()).filter(Boolean)); toast(`Imported ${n} alphas from ${f.name}`); }
+  catch(err){ toast("Couldn't read that file: "+err.message, true); }
+  e.target.value=""; };
+
+/* template builder */
+const BUILTIN_LISTS = [
+  {name:"Lookback windows", values:"5, 10, 20, 60, 120, 250"},
+  {name:"Short windows", values:"2, 3, 5, 10"},
+  {name:"Long windows", values:"60, 120, 250, 500"},
+  {name:"Groups", values:"industry, sector, subindustry, market"},
+  {name:"Time-series operators", values:"ts_mean, ts_rank, ts_zscore, ts_delta, ts_std_dev, ts_sum, ts_decay_linear"},
+  {name:"Cross-sectional operators", values:"rank, zscore, scale"},
+  {name:"Group operators", values:"group_rank, group_neutralize, group_zscore"},
+  {name:"Vector operators", values:"vec_avg, vec_sum, vec_max, vec_min"},
+  {name:"Price and volume fields", values:"close, open, high, low, vwap, volume, returns, adv20, cap"},
+];
+function placeholders(t){ return [...new Set([...t.matchAll(/\{(\w+)\}/g)].map(m=>m[1]))]; }
+function splitVals(s){ return [...new Set(String(s||"").split(",").map(x=>x.trim()).filter(Boolean))]; }
+const ctxOf = o => ({region:o.region, universe:o.universe, delay:Number(o.delay)});
+const ctxStr = c => `${c.region}|${c.universe}|${c.delay}`;
+const ctxLabel = c => `${c.region} · ${c.universe} · delay ${c.delay}`;
+const fmtN = n => n>=1e15 ? "more than a million billion" : Math.round(n).toLocaleString();
+function tplInfo(){ const names=placeholders(S.tpl.t); const lists=names.map(n=>splitVals(S.tpl.v[n]));
+  const total=S.tpl.t.trim() ? lists.reduce((a,l)=>a*l.length,1) : 0; return {names,lists,total}; }
+function tplAt(names, lists, idx){ let s=S.tpl.t; names.forEach((n,i)=>{ s=s.split("{"+n+"}").join(lists[i][idx[i]]); }); return s; }
+function tplExpand(max){
+  const {names,lists,total}=tplInfo(); const out=[]; const idx=names.map(()=>0);
+  if(total>0) for(let k=0;k<Math.min(total,max);k++){ out.push(tplAt(names,lists,idx)); for(let i=names.length-1;i>=0;i--){ if(++idx[i]<lists[i].length) break; idx[i]=0; } }
+  return {list:out,total,names};
+}
+/** n distinct expressions picked at random from every combination (works for huge totals too). */
+function tplSample(n){
+  const {names,lists,total}=tplInfo(); if(!total) return [];
+  if(total<=n*2 && total<=200000){ const all=tplExpand(total).list;
+    for(let i=all.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [all[i],all[j]]=[all[j],all[i]]; } return all.slice(0,n); }
+  const out=new Set(); let tries=0;
+  while(out.size<n && tries<n*30){ tries++; out.add(tplAt(names,lists,lists.map(l=>Math.floor(Math.random()*l.length)))); }
+  return [...out];
+}
+function renderTpl(force){
+  $("#tpl").value=S.tpl.t; const names=placeholders(S.tpl.t), box=$("#phs");
+  const cur=$$("#phs input").map(i=>i.dataset.n); const same=names.length===cur.length && names.every((n,i)=>cur[i]===n);
+  if(!same || force){
+    box.innerHTML=names.map(n=>`<div class="ph"><code>{${esc(n)}}</code><input type="text" data-n="${esc(n)}" class="mono" autocapitalize="off" autocomplete="off" placeholder="values, separated, by, commas" aria-label="Values for ${esc(n)}"><button class="btn sm" type="button" data-fill="${esc(n)}">Fill</button><div class="ph-note" data-note="${esc(n)}"></div></div>`).join("");
+    $$("#phs input").forEach(i=>i.addEventListener("input", ()=>{ S.tpl.v[i.dataset.n]=i.value; if(S.tpl.src[i.dataset.n]) delete S.tpl.src[i.dataset.n]; renderNotes(); renderTplPreview(); saveCfg(); }));
+  }
+  $$("#phs input").forEach(i=>{ if(document.activeElement!==i) i.value=S.tpl.v[i.dataset.n]||""; });
+  renderNotes(); renderTplPreview();
+}
+function renderNotes(){
+  const now=ctxStr(ctxOf(S.settings));
+  $$("#phs .ph-note").forEach(el=>{ const n=el.dataset.note, src=S.tpl.src[n], k=splitVals(S.tpl.v[n]).length;
+    if(src){ const c=src.ctx.split("|");
+      el.innerHTML=`<b>● Synced</b> ${fmtN(k)} field${k===1?"":"s"} · ${esc(src.spec.category)} · ${esc(c[0])} ${esc(c[1])} D${esc(c[2])}`
+        +(src.ctx!==now?` <span class="stale">· will update for your new market when you add</span>`:"")+` · <a href="#" data-unlink="${esc(n)}">unlink</a>`; }
+    else el.textContent = k>8 ? `${fmtN(k)} values` : ""; });
+}
+function renderTplPreview(){
+  const mode=$("#tpl-mode").value; $("#tpl-n-wrap").classList.toggle("hidden", mode!=="sample");
+  const {list,total}=tplExpand(6);
+  $("#tpl-preview").textContent = list.length ? list.join("\n")+(total>6?`\n... and ${fmtN(total-6)} more`:"") : "Fill in the values above to see your alphas.";
+  const n=parseInt($("#tpl-n").value,10)||0;
+  $("#tpl-count").textContent = !total ? "" : mode==="sample" ? `Picks ${fmtN(Math.min(n,total))} at random from ${fmtN(total)} combinations.` : `This creates ${fmtN(total)} alpha${total>1?"s":""}.`;
+  $("#btn-tpl-add").disabled = !total || (mode==="sample" && n<1);
+}
+$("#tpl").addEventListener("input", e=>{ S.tpl.t=e.target.value; renderTpl(); saveCfg(); });
+$("#tpl-mode").onchange=()=>{ S.tpl.mode=$("#tpl-mode").value; renderTplPreview(); saveCfg(); };
+$("#tpl-n").oninput=()=>{ S.tpl.n=parseInt($("#tpl-n").value,10)||0; renderTplPreview(); saveCfg(); };
+$("#tpl-preset").innerHTML = Object.keys(PRESETS).map(k=>`<option>${esc(k)}</option>`).join("");
+$("#tpl-preset").onchange = e=>{ const p=PRESETS[e.target.value]; S.tpl={...S.tpl, t:p.t, v:{...p.v}, src:{}}; renderTpl(true); saveCfg(); };
+$("#phs").addEventListener("click", e=>{ const f=e.target.closest("[data-fill]"), u=e.target.closest("[data-unlink]");
+  if(f) openFill(f.dataset.fill);
+  if(u){ e.preventDefault(); delete S.tpl.src[u.dataset.unlink]; renderNotes(); saveCfg(); toast("Unlinked. The values stay as they are."); } });
+/** Placeholders filled from BRAIN data follow the market: re-download them if Settings changed since. */
+async function syncLinked(){
+  const ctx=ctxOf(S.settings), key=ctxStr(ctx), names=placeholders(S.tpl.t);
+  for(const [n,src] of Object.entries(S.tpl.src)){
+    if(!names.includes(n) || src.ctx===key) continue;
+    toast(`Updating {${n}} for ${ctxLabel(ctx)}...`);
+    const r=await Engine.catalog.resolve(src.spec, ctx, {});
+    S.tpl.v[n]=r.values.join(", "); src.ctx=key; src.count=r.values.length; src.at=Date.now();
+  }
+  renderTpl(true); saveCfg();
+}
+$("#btn-tpl-add").onclick = async ()=>{
+  const btn=$("#btn-tpl-add"); btn.disabled=true;
+  try{
+    if(Object.keys(S.tpl.src).length){ if(!S.session) throw new Error("Sign in to sync the data fields."); await syncLinked(); }
+    const {total}=tplInfo(); let list;
+    if($("#tpl-mode").value==="sample"){
+      const n=parseInt($("#tpl-n").value,10)||0; if(n<1) throw new Error("Enter a sample size.");
+      if(n>20000 && !confirm(`Add ${fmtN(Math.min(n,total))} alphas to your list?`)) return;
+      list=tplSample(Math.min(n,200000));
+    } else {
+      if(total>50000){ if(!confirm(`That is ${fmtN(total)} alphas. Only the first 50,000 will be added. Tip: choose "A random sample" to spread them out. Continue?`)) return; }
+      else if(total>5000 && !confirm(`That is ${fmtN(total)} alphas. Add them all?`)) return;
+      list=tplExpand(50000).list;
+    }
+    const n=appendLines(list); toast(n?`Added ${fmtN(n)} alphas to your list`:"Those alphas are already in your list");
+  }catch(e){ toast(e.message, true); }
+  finally{ btn.disabled=false; renderTplPreview(); }
+};
+
+/* --------------------------------------------------------------- fill dialog */
+const FD={mode:"tpl", name:"", ctx:null, ds:[], spec:null, token:null, onDone:null, items:[]};
+function fillTab(t){ $$("[data-ft]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.ft===t)); $("#ft-lists").classList.toggle("hidden", t!=="lists"); $("#ft-data").classList.toggle("hidden", t!=="data"); if(t==="data") loadPickerDatasets(false); }
+$$("[data-ft]").forEach(b=>b.onclick=()=>fillTab(b.dataset.ft));
+$("#fill-close").onclick=()=>$("#fill").close();
+$("#fill").addEventListener("close", ()=>{ if(FD.token) FD.token.cancelled=true; });
+function setPickerSpec(spec){ FD.spec={...DEFAULT_SPEC, ...(spec||{})}; const sp=FD.spec;
+  $$("#fd-types input").forEach(i=>i.checked=sp.types.includes(i.value)); $("#fd-cov").value=Math.round((sp.minCoverage||0)*100); $("#fd-sort").value=sp.sort||"popular";
+  $("#fd-max").value=sp.max||0; $("#fd-vec").value=sp.vecOp||"vec_avg"; $("#fd-q").value=sp.search||""; $("#fd-status").textContent=""; $("#fd-refresh").checked=false; }
+function openFill(name){
+  FD.mode="tpl"; FD.name=name; FD.ctx=ctxOf(S.settings);
+  $("#fill-title").textContent=`Fill {${name}}`; $("#fill-tabs").classList.remove("hidden"); $("#fd-link-wrap").classList.remove("hidden");
+  $("#fd-go").textContent=`Sync & fill {${name}}`; $("#fill-save-name").value=""; $("#fill-msg").textContent="";
+  const src=S.tpl.src[name]; setPickerSpec(src?src.spec:DEFAULT_SPEC); $("#fd-link").checked=true;
+  renderLists(); $("#fill").showModal(); fillTab(src?"data":"lists");
+}
+function openDataPicker(spec, ctx, onDone){
+  FD.mode="ai"; FD.ctx=ctx; FD.onDone=onDone; $("#fill-title").textContent="Data for the AI"; $("#fill-tabs").classList.add("hidden"); $("#fd-link-wrap").classList.add("hidden");
+  $("#fd-go").textContent="Use this data"; setPickerSpec(spec); $("#fill").showModal(); fillTab("data");
+}
+async function loadPickerDatasets(force){
+  $("#fd-ctx").textContent=ctxLabel(FD.ctx);
+  if(!S.session){ $("#fd-status").textContent="Sign in first."; return; }
+  $("#fd-cat").innerHTML="<option>Loading categories...</option>"; $("#fd-ds").innerHTML="";
+  try{ FD.ds=await Engine.catalog.datasets(FD.ctx, force); }catch(e){ $("#fd-status").textContent=e.message; $("#fd-cat").innerHTML=""; return; }
+  const counts={}; FD.ds.forEach(d=>counts[d.category]=(counts[d.category]||0)+1);
+  const cats=Object.keys(counts).sort();
+  $("#fd-cat").innerHTML=`<option value="">Choose a category...</option>`+cats.map(c=>`<option value="${esc(c)}">${esc(c)} (${counts[c]} dataset${counts[c]>1?"s":""})</option>`).join("");
+  $("#fd-cat").value=cats.includes(FD.spec.category)?FD.spec.category:""; renderPickerDatasets();
+}
+function renderPickerDatasets(){
+  const cat=$("#fd-cat").value, list=FD.ds.filter(d=>d.category===cat), chosen=new Set(FD.spec.category===cat?(FD.spec.datasets||[]):[]);
+  const all=!list.some(d=>chosen.has(d.id));
+  $("#fd-ds").innerHTML = list.length ? list.map(d=>`<label><input type="checkbox" value="${esc(d.id)}" ${all||chosen.has(d.id)?"checked":""}><span><b class="mono">${esc(d.id)}</b> ${esc(d.name)}<br><span class="muted">${d.fieldCount!=null?fmtN(d.fieldCount)+" fields":""}${d.coverage!=null?` · coverage ${(d.coverage*100).toFixed(0)}%`:""}</span></span></label>`).join("")
+    : `<span class="muted small">${cat?"No datasets in this category.":"Pick a category to see its datasets."}</span>`;
+}
+$("#fd-cat").onchange=()=>{ FD.spec.category=$("#fd-cat").value; FD.spec.datasets=[]; renderPickerDatasets(); };
+$("#fd-all").onclick=()=>{ const b=$$("#fd-ds input"); const on=!b.every(x=>x.checked); b.forEach(x=>x.checked=on); };
+function readPickerSpec(){
+  const boxes=$$("#fd-ds input"), checked=boxes.filter(b=>b.checked).map(b=>b.value);
+  return {category:$("#fd-cat").value, datasets: checked.length===boxes.length ? [] : checked, types:$$("#fd-types input:checked").map(i=>i.value),
+    minCoverage:Math.max(0,Math.min(100,Number($("#fd-cov").value)||0))/100, sort:$("#fd-sort").value, max:Math.max(0,parseInt($("#fd-max").value,10)||0),
+    vecOp:$("#fd-vec").value, search:$("#fd-q").value.trim()};
+}
+const specLabel=sp=>`${sp.category}${sp.datasets&&sp.datasets.length?` (${sp.datasets.length} dataset${sp.datasets.length>1?"s":""})`:""} · ${sp.types.join(" + ")}${sp.minCoverage?` · coverage ≥ ${Math.round(sp.minCoverage*100)}%`:""} · ${sp.max?`top ${sp.max} fields`:"all fields"}`;
+$("#fd-go").onclick=async()=>{
+  const spec=readPickerSpec(), st=$("#fd-status");
+  if(!spec.category){ st.textContent="Pick a category first."; return; }
+  if(!spec.types.length){ st.textContent="Tick at least one field type."; return; }
+  if($$("#fd-ds input").length && !$$("#fd-ds input:checked").length){ st.textContent="Tick at least one dataset."; return; }
+  if(FD.mode==="ai"){ FD.onDone(spec); $("#fill").close(); return; }
+  FD.token={cancelled:false}; const go=$("#fd-go"); go.disabled=true; $("#fd-stop").classList.remove("hidden"); st.textContent="Starting...";
+  try{
+    const r=await Engine.catalog.resolve(spec, FD.ctx, {force:$("#fd-refresh").checked, token:FD.token,
+      onProgress:p=>{ st.textContent = p.cached ? `Using saved ${p.dataset} (${fmtN(p.fields)} fields so far)` : `Downloading ${p.dataset}: ${fmtN(p.page||0)} of ${fmtN(p.of||0)} fields...`; }});
+    if(!r.values.length){ st.textContent="No fields match these filters. Lower the coverage or tick more field types."; return; }
+    S.tpl.v[FD.name]=r.values.join(", ");
+    if($("#fd-link").checked) S.tpl.src[FD.name]={spec, ctx:ctxStr(FD.ctx), count:r.values.length, at:Date.now()}; else delete S.tpl.src[FD.name];
+    renderTpl(true); saveCfg(); $("#fill").close(); toast(`{${FD.name}} now holds ${fmtN(r.values.length)} fields from ${spec.category}`);
+  }catch(e){ st.textContent=e.message; }
+  finally{ go.disabled=false; $("#fd-stop").classList.add("hidden"); FD.token=null; }
+};
+$("#fd-stop").onclick=()=>{ if(FD.token) FD.token.cancelled=true; };
+function renderLists(){
+  const items=[...(S.lists||[]).map((l,i)=>({...l, idx:i})), ...BUILTIN_LISTS]; FD.items=items;
+  $("#fill-lists").innerHTML=items.map((l,k)=>`<div class="li"><span><b>${esc(l.name)}</b>${l.idx!=null?'<span class="tag">YOURS</span>':""} <span class="muted small">· ${splitVals(l.values).length}</span></span>
+    <span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sm" data-li="${k}" data-act="use" type="button">Use</button><button class="btn sm ghost" data-li="${k}" data-act="add" type="button">Add</button>${l.idx!=null?`<button class="btn sm ghost" data-li="${k}" data-act="del" type="button" aria-label="Delete ${esc(l.name)}">✕</button>`:""}</span>
+    <div class="pv">${esc(l.values)}</div></div>`).join("");
+}
+$("#fill-lists").onclick=e=>{ const b=e.target.closest("[data-li]"); if(!b) return; const l=FD.items[+b.dataset.li], n=FD.name;
+  if(b.dataset.act==="del"){ if(!confirm(`Delete your list "${l.name}"?`)) return; S.lists.splice(l.idx,1); saveCfg(); renderLists(); $("#fill-msg").textContent=`Deleted "${l.name}".`; return; }
+  const vals = b.dataset.act==="add" ? [...new Set([...splitVals(S.tpl.v[n]), ...splitVals(l.values)])] : splitVals(l.values);
+  S.tpl.v[n]=vals.join(", "); delete S.tpl.src[n]; renderTpl(true); saveCfg(); $("#fill").close(); toast(`{${n}} now has ${vals.length} values`); };
+$("#fill-save").onclick=()=>{ const name=$("#fill-save-name").value.trim(), vals=splitVals(S.tpl.v[FD.name]), msg=$("#fill-msg");
+  if(!name){ msg.textContent="Give the list a name first."; return; } if(!vals.length){ msg.textContent=`{${FD.name}} is empty, so there is nothing to save.`; return; }
+  S.lists=S.lists||[]; const i=S.lists.findIndex(l=>l.name.toLowerCase()===name.toLowerCase()); const item={name, values:vals.join(", ")};
+  if(i>=0) S.lists[i]=item; else S.lists.unshift(item); saveCfg(); renderLists(); $("#fill-save-name").value=""; msg.textContent=`Saved "${name}" with ${vals.length} values. It's at the top of the list.`; };
+
+/* ---------------------------------------------------------------------- AI */
+let aiToken=null;
+function buildAi(){
+  const A=S.ai, PR=Engine.ai.providers;
+  $("#ai-provider").innerHTML=Object.entries(PR).map(([k,v])=>`<option value="${k}">${esc(v.label)}</option>`).join(""); $("#ai-provider").value=A.provider;
+  $("#ai-preset").innerHTML=`<option value="">Known services...</option>`+Engine.ai.presets.map(([n,u])=>`<option value="${esc(u)}">${esc(n)}</option>`).join("");
+  $("#ai-base").value=A.base; $("#ai-key").value=A.key; $("#ai-remember").checked=A.remember; $("#ai-model").value=A.model;
+  $("#ai-idea").value=A.idea; $("#ai-count").value=A.count; $("#ai-batch").value=A.batch; $("#ai-strict").checked=A.strict; $("#ai-switch").checked=A.switchMarket;
+  if(!A.region){ A.region=S.settings.region; A.universe=S.settings.universe; A.delay=S.settings.delay; }
+  aiMarket(); aiProviderUi(); renderAiData();
+}
+function aiProviderUi(){ const p=S.ai.provider, PR=Engine.ai.providers[p]||{models:[]};
+  $("#ai-base-wrap").classList.toggle("hidden", p!=="compatible");
+  $("#ai-models").innerHTML=(PR.models||[]).map(m=>`<option value="${esc(m)}">`).join("");
+  $("#ai-model").placeholder = PR.models && PR.models[0] ? `e.g. ${PR.models[0]}` : "Model name from your provider";
+  $("#ai-model-list").classList.add("hidden");
+  $("#ai-sum").textContent = S.ai.key ? PR.label : "";
+}
+function aiMarket(){ const A=S.ai, rows=S.optsData?.rows||[]; const regions=[...new Set(rows.map(r=>r.region))];
+  if(!regions.includes(A.region) && regions.length) A.region=regions[0];
+  $("#ai-region").innerHTML=regions.map(r=>`<option ${r===A.region?"selected":""}>${esc(r)}</option>`).join("");
+  const rs=rows.filter(r=>r.region===A.region); const delays=[...new Set(rs.map(r=>r.delay))].sort((a,b)=>b-a);
+  if(!delays.includes(Number(A.delay)) && delays.length) A.delay=delays[0];
+  $("#ai-delay").innerHTML=delays.map(d=>`<option value="${d}" ${d==A.delay?"selected":""}>Delay ${d}</option>`).join("");
+  const row=rs.find(r=>r.delay==A.delay)||rs[0]; const unis=row?row.universes:[];
+  if(!unis.includes(A.universe) && unis.length) A.universe=unis[0];
+  $("#ai-universe").innerHTML=unis.map(u=>`<option ${u===A.universe?"selected":""}>${esc(u)}</option>`).join("");
+}
+function renderAiData(){ $("#ai-data-sum").textContent = S.ai.spec.category ? specLabel(S.ai.spec) : "Not chosen yet"; }
+const aiCtx=()=>({region:S.ai.region, universe:S.ai.universe, delay:Number(S.ai.delay)});
+const aiCfg=()=>({provider:S.ai.provider, base:S.ai.provider==="compatible"?String(S.ai.base).trim():"", key:String(S.ai.key).trim(), model:String(S.ai.model).trim()});
+$("#ai-provider").onchange=e=>{ S.ai.provider=e.target.value; aiProviderUi(); saveCfg(); };
+$("#ai-preset").onchange=e=>{ if(e.target.value){ S.ai.base=e.target.value; $("#ai-base").value=e.target.value; e.target.value=""; saveCfg(); } };
+for(const [id,key,num] of [["ai-base","base"],["ai-key","key"],["ai-model","model"],["ai-idea","idea"],["ai-count","count",1],["ai-batch","batch",1]])
+  $("#"+id).addEventListener("input", e=>{ S.ai[key] = num ? (parseInt(e.target.value,10)||0) : e.target.value; if(key==="key") aiProviderUi(); saveCfg(); });
+for(const [id,key] of [["ai-remember","remember"],["ai-strict","strict"],["ai-switch","switchMarket"]]) $("#"+id).onchange=e=>{ S.ai[key]=e.target.checked; saveCfg(); };
+$("#ai-region").onchange=e=>{ S.ai.region=e.target.value; aiMarket(); saveCfg(); };
+$("#ai-delay").onchange=e=>{ S.ai.delay=Number(e.target.value); aiMarket(); saveCfg(); };
+$("#ai-universe").onchange=e=>{ S.ai.universe=e.target.value; saveCfg(); };
+$("#ai-key-show").onclick=()=>{ const k=$("#ai-key"), show=k.type==="password"; k.type=show?"text":"password"; $("#ai-key-show").textContent=show?"Hide":"Show"; };
+$("#ai-data-btn").onclick=()=>{ if(!S.session) return toast("Sign in first", true); openDataPicker(S.ai.spec, aiCtx(), spec=>{ S.ai.spec=spec; renderAiData(); saveCfg(); }); };
+$("#ai-load-models").onclick=async()=>{ const b=$("#ai-load-models"); b.disabled=true; b.textContent="Loading...";
+  try{ const ids=await Engine.ai.listModels(aiCfg()); if(!ids.length) throw new Error("The service returned no models.");
+    $("#ai-models").innerHTML=ids.map(m=>`<option value="${esc(m)}">`).join("");
+    const sel=$("#ai-model-list"); sel.innerHTML=`<option value="">Pick one of your ${ids.length} models...</option>`+ids.map(m=>`<option ${m===S.ai.model?"selected":""}>${esc(m)}</option>`).join(""); sel.classList.remove("hidden");
+    toast(`${ids.length} models available`); }
+  catch(e){ toast(e.message, true); }
+  finally{ b.disabled=false; b.textContent="Load models"; } };
+$("#ai-model-list").onchange=e=>{ if(e.target.value){ S.ai.model=e.target.value; $("#ai-model").value=e.target.value; saveCfg(); } };
+$("#ai-go").onclick=async()=>{
+  if(!S.session) return toast("Sign in first", true);
+  if(!S.ai.spec.category){ toast("Choose the data first", true); $("#ai-data-btn").click(); return; }
+  const ctx=aiCtx(); aiToken={cancelled:false}; let added=0; const shown=[];
+  $("#ai-go").disabled=true; $("#ai-stop").classList.remove("hidden"); $("#ai-bar").classList.remove("hidden"); $("#ai-bar b").style.width="0"; $("#ai-preview").classList.add("hidden");
+  try{
+    const res=await Engine.ai.generate({cfg:aiCfg(), ctx, spec:S.ai.spec, count:S.ai.count, batchSize:S.ai.batch, strict:S.ai.strict, idea:S.ai.idea, existing:exprList().list}, p=>{
+      $("#ai-status").textContent=p.msg+(p.rejected?` · ${p.rejected} unusable line${p.rejected>1?"s":""} skipped`:"");
+      if(p.total) $("#ai-bar b").style.width=(p.done/p.total*100)+"%";
+      if(p.items && p.items.length){ added+=appendLines(p.items); shown.push(...p.items); const pv=$("#ai-preview"); pv.classList.remove("hidden");
+        pv.textContent=shown.slice(-8).join("\n")+(shown.length>8?`\n... ${fmtN(shown.length)} in total`:""); }
+    }, aiToken);
+    let msg=`Added ${fmtN(added)} expression${added===1?"":"s"} to your list`;
+    if(res.rejected) msg+=` · ${res.rejected} unusable line${res.rejected>1?"s":""} skipped`;
+    if(res.cancelled) msg+=" · stopped";
+    else if(res.expressions.length<Math.max(1,S.ai.count)) msg+=". The AI ran out of new ideas: try another idea, more data, or another model";
+    $("#ai-status").textContent=msg+"."; toast(`Added ${fmtN(added)} AI expressions`);
+    if(added && S.ai.switchMarket && ctxStr(ctx)!==ctxStr(ctxOf(S.settings))){
+      Object.assign(S.settings,{region:ctx.region, universe:ctx.universe, delay:ctx.delay}); buildSettings(); afterSettings(); toast(`Settings now use ${ctxLabel(ctx)}`); }
+  }catch(e){ $("#ai-status").textContent=e.message+(added?` (${added} were added before this)`:""); toast(e.message, true); }
+  finally{ $("#ai-go").disabled=false; $("#ai-stop").classList.add("hidden"); aiToken=null; }
+};
+$("#ai-stop").onclick=()=>{ if(aiToken){ aiToken.cancelled=true; $("#ai-status").textContent="Stopping after the current request..."; } };
+
+/* ------------------------------------------------------------ super alphas */
+const linesOf=t=>[...new Set(String(t||"").split(/\r?\n/).map(s=>s.trim()).filter(s=>s && !s.startsWith("#")))];
+function superList(){ const out=[]; for(const s of linesOf(S.sa.sel)) for(const c of linesOf(S.sa.combo)) out.push({selection:s, combo:c}); return out; }
+function superIssues(){ const out=[]; for(const [what,t] of [["Selection",S.sa.sel],["Combo",S.sa.combo]]) linesOf(t).forEach((l,i)=>{ const o=(l.match(/\(/g)||[]).length, c=(l.match(/\)/g)||[]).length; if(o!==c) out.push(`${what} line ${i+1}: ${o>c?"missing )":"extra )"}`); }); return out; }
+function refreshSuper(){ const s=linesOf(S.sa.sel).length, c=linesOf(S.sa.combo).length; $("#sa-count").textContent=s*c;
+  $("#sa-note").textContent = s&&c ? `${s} selection${s>1?"s":""} × ${c} combo${c>1?"s":""}` : "Add at least one of each";
+  const iss=superIssues(), box=$("#sa-issues"); box.classList.toggle("hidden", !iss.length); box.innerHTML=iss.length?"<b>Check these lines:</b><br>"+iss.map(esc).join("<br>"):"";
+  updateBar(); }
+function buildSuper(){ $("#sa-sel").value=S.sa.sel; $("#sa-combo").value=S.sa.combo; $("#sa-handling").value=S.sa.handling; $("#sa-limit").value=S.sa.limit; refreshSuper(); }
+$("#sa-sel").oninput=e=>{ S.sa.sel=e.target.value; refreshSuper(); saveCfg(); };
+$("#sa-combo").oninput=e=>{ S.sa.combo=e.target.value; refreshSuper(); saveCfg(); };
+$("#sa-handling").onchange=e=>{ S.sa.handling=e.target.value; saveCfg(); };
+$("#sa-limit").oninput=e=>{ S.sa.limit=parseInt(e.target.value,10)||0; saveCfg(); };
+function setMode(m, quiet){ S.mode=m==="super"?"super":"regular"; $$(".modebar button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.mode===S.mode));
+  $("#mode-regular").classList.toggle("hidden", S.mode!=="regular"); $("#mode-super").classList.toggle("hidden", S.mode!=="super");
+  $("#alphas-sub").textContent = S.mode==="super" ? "Super alphas combine alphas you already submitted. Write selection and combo expressions; every pair is simulated."
+    : "One expression per line. Type or paste them, generate many from a template, or let an AI write them. Lines starting with # are ignored.";
+  updateBar(); if(!quiet) saveCfg(); }
+$$(".modebar button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+
+/* --------------------------------------------------------------- settings */
+function rowsFor(region){ return (S.optsData?.rows||[]).filter(r=>r.region===region); }
+function buildSettings(){
+  const st=S.settings, rows=S.optsData?.rows||[]; const regions=[...new Set(rows.map(r=>r.region))];
+  if(!regions.includes(st.region) && regions.length) st.region=regions[0];
+  $("#s-region").innerHTML=regions.map(r=>`<option ${r===st.region?"selected":""}>${esc(r)}</option>`).join("");
+  fillDependent();
+  $("#s-decay").value=st.decays; $("#s-trunc").value=st.truncation; $("#s-past").value=st.pasteurization; $("#s-nan").value=st.nanHandling;
+  $("#s-unit").value=st.unitHandling; $("#s-maxtrade").value=st.maxTrade; $("#s-test").value=st.testPeriod;
+  const o=S.opts; $("#o-workers").value=o.workers; $("#o-workers-v").textContent=o.workers; $("#o-multi").checked=o.multi; $("#o-skip").checked=o.skipDone;
+  $("#o-deep").checked=o.deepChecks; $("#o-color").checked=o.colorTag; $("#o-sharpe").value=o.minSharpe; $("#o-fit").value=o.minFitness;
+  $("#opt-src").textContent = S.optsData?.source==="fallback" ? "Couldn't load BRAIN's live list of options, so common ones are shown." : "";
+}
+function fillDependent(){
+  const st=S.settings, rs=rowsFor(st.region); if(!rs.length) return;
+  const delays=[...new Set(rs.map(r=>r.delay))].sort((a,b)=>b-a); if(!delays.includes(Number(st.delay))) st.delay=delays[0];
+  $("#s-delay").innerHTML=delays.map(d=>`<option ${d==st.delay?"selected":""}>${d}</option>`).join("");
+  const row=rs.find(r=>r.delay==st.delay)||rs[0];
+  if(!row.universes.includes(st.universe)) st.universe=row.universes[0];
+  $("#s-universe").innerHTML=row.universes.map(u=>`<option ${u===st.universe?"selected":""}>${esc(u)}</option>`).join("");
+  st.neutralizations=st.neutralizations.filter(n=>row.neutralizations.includes(n));
+  if(!st.neutralizations.length) st.neutralizations=[row.neutralizations.includes("INDUSTRY")?"INDUSTRY":row.neutralizations[0]];
+  $("#s-neut").innerHTML=row.neutralizations.map(n=>`<label><input type="checkbox" value="${esc(n)}" ${st.neutralizations.includes(n)?"checked":""}><span>${esc(n)}</span></label>`).join("");
+  $$("#s-neut input").forEach(i=>i.onchange=()=>{ st.neutralizations=$$("#s-neut input:checked").map(x=>x.value); if(!st.neutralizations.length){ i.checked=true; st.neutralizations=[i.value]; toast("Pick at least one"); } afterSettings(); });
+}
+function parseDecays(s){ const v=[...new Set(String(s).split(/[,\s]+/).filter(Boolean).map(Number).filter(n=>Number.isInteger(n)&&n>=0&&n<=512))]; return v.length?v:[0]; }
+function afterSettings(){ updateBar(); saveCfg(); renderNotes(); if(S.view==="explore") $("#ex-ctx").textContent=exCtx(); }
+$("#s-region").onchange=e=>{ S.settings.region=e.target.value; fillDependent(); afterSettings(); };
+$("#s-delay").onchange=e=>{ S.settings.delay=Number(e.target.value); fillDependent(); afterSettings(); };
+$("#s-universe").onchange=e=>{ S.settings.universe=e.target.value; afterSettings(); };
+$("#s-decay").oninput=e=>{ S.settings.decays=e.target.value; afterSettings(); };
+$("#s-trunc").oninput=e=>{ S.settings.truncation=e.target.value===""?"":Number(e.target.value); afterSettings(); };
+for(const [id,key] of [["s-past","pasteurization"],["s-nan","nanHandling"],["s-unit","unitHandling"],["s-maxtrade","maxTrade"],["s-test","testPeriod"]])
+  $("#"+id).oninput=e=>{ S.settings[key]=e.target.value; afterSettings(); };
+$("#o-workers").oninput=e=>{ S.opts.workers=Number(e.target.value); $("#o-workers-v").textContent=e.target.value; saveCfg(); };
+for(const [id,key] of [["o-multi","multi"],["o-skip","skipDone"],["o-deep","deepChecks"],["o-color","colorTag"]]) $("#"+id).onchange=e=>{ S.opts[key]=e.target.checked; saveCfg(); };
+$("#o-sharpe").oninput=e=>{ S.opts.minSharpe=Number(e.target.value); saveCfg(); };
+$("#o-fit").oninput=e=>{ S.opts.minFitness=Number(e.target.value); saveCfg(); };
+$("#forget").onclick=async e=>{ e.preventDefault(); if(confirm("Forget which alphas you already simulated?")){ await api("/api/forget_history",{}); toast("History cleared"); } };
+$$("[data-preset]").forEach(b=>b.onclick=()=>{ const p=b.dataset.preset, st=S.settings;
+  if(p==="beginner"){ Object.assign(st,{...DEFAULT_SETTINGS, region:st.region}); }
+  if(p==="decay"){ st.decays="0, 4, 8"; }
+  if(p==="neut"){ const row=(rowsFor(st.region).find(r=>r.delay==st.delay)||{neutralizations:[]}).neutralizations; st.neutralizations=["MARKET","SECTOR","INDUSTRY","SUBINDUSTRY"].filter(n=>row.includes(n)); }
+  buildSettings(); afterSettings(); toast("Preset applied"); });
+
+/* --------------------------------------------------------------- action bar */
+function plan(){ const nN=S.settings.neutralizations.length, nD=parseDecays(S.settings.decays).length;
+  const n = S.mode==="super" ? superList().length : exprList().list.length;
+  return {alphas:n, variants:nN*nD, total:n*nN*nD, kind:S.mode}; }
+function updateBar(){
+  const busy=isBusy(S.run), btn=$("#btn-start");
+  const visible = S.view==="alphas" || S.view==="settings" || (S.view==="run" && !busy && !(narrow() && S.rows.length));
+  $("#actionbar").classList.toggle("hidden", !visible); document.body.classList.toggle("has-ab", visible);
+  if(busy){ $("#ab-sum").innerHTML=`<b>${S.run.done}</b> of <b>${S.run.total}</b> simulations finished`; btn.textContent="View progress"; btn.disabled=false; $("#ab-note").textContent=""; return; }
+  const p=plan(); btn.disabled=false; btn.textContent="Start simulating"; const w=p.kind==="super"?"super alpha":"alpha";
+  $("#ab-sum").innerHTML = p.alphas ? `<b>${p.alphas}</b> ${w}${p.alphas>1?"s":""} &times; <b>${p.variants}</b> setting variant${p.variants>1?"s":""} = <b>${p.total}</b> simulation${p.total>1?"s":""}`
+    : `<span class="muted">${p.kind==="super"?"Add a selection and a combo expression to begin":"Add at least one alpha to begin"}</span>`;
+  $("#ab-note").textContent = "";
+}
+$("#btn-start").onclick = async ()=>{
+  if(isBusy(S.run)){ show("run"); return; }
+  const sup=S.mode==="super", p=plan();
+  if(!p.alphas){ toast(sup?"Add at least one selection and one combo expression":"Add at least one alpha first", true); show("alphas"); return; }
+  const iss=sup?superIssues():lineIssues(); if(iss.length && !confirm(`${iss.length} line(s) look broken (for example missing brackets). BRAIN will report them as errors. Continue?`)) { show("alphas"); return; }
+  if(p.total>200 && !confirm(`This will run ${p.total.toLocaleString()} simulations and may take a while. Continue?`)) return;
+  const st={...S.settings, decays:parseDecays(S.settings.decays)};
+  const body = sup ? {kind:"super", supers:superList(), settings:{...st, selectionHandling:S.sa.handling, selectionLimit:S.sa.limit}, opts:S.opts}
+    : {expressions:exprList().list, settings:st, opts:S.opts};
+  const btn=$("#btn-start"); btn.disabled=true;
+  try{ const r=await api("/api/run", body); toast(`Started ${r.total} ${sup?"super alpha ":""}simulations`+(r.skipped?` (${r.skipped} skipped, already done)`:"")); S.rows=[]; S.rowCur=0; S.logCur=0; S.rid=-1; $("#log").innerHTML=""; await poll(); show("run"); }
+  catch(e){ toast(e.message, true); }
+  finally{ btn.disabled=false; updateBar(); }
+};
+$("#btn-pause").onclick=async()=>{ await api(S.run.status==="paused"?"/api/resume":"/api/pause",{}); poll(); };
+$("#btn-stop").onclick=async()=>{ if(S.run.status==="stopping"){ await api("/api/abort",{}); } else { await api("/api/stop",{}); toast("Finishing what was already sent. Tap again to stop right now."); } poll(); };
+$("#btn-save-csv").onclick=async()=>{ try{ const r=await api("/api/save_csv",{}); if(r.path) toast("Saved to "+r.path); }catch(e){ toast(e.message,true); } };
+$("#btn-share-csv").onclick=async()=>{ try{ await api("/api/share_csv",{}); }catch(e){ toast(e.message,true); } };
+$("#btn-copy-good").onclick=()=>{ const g=S.rows.filter(r=>r.status==="good").map(r=>r.expression); if(!g.length) return toast("No good alphas yet"); copy(g.join("\n"), g.length+" expressions"); };
+$("#btn-battery").onclick=()=>Platform.openBatterySettings();
+
+/* ------------------------------------------------------------------ polling */
+const mm=s=>{ s=Math.max(0,Math.round(s)); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60; return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0"); };
+function runSub(st){
+  const saved = st.exported ? `Saved to ${st.exported}.` : (Platform.isAndroid ? "Use Save CSV or Share to keep the results." : "");
+  return {idle:"Results appear here as BRAIN finishes each simulation, and are saved automatically.",
+    running:"Running. You can leave this screen or the app; the work continues.", paused:"Paused. Simulations already sent will still finish.", stopping:"Stopping...",
+    finished:("Finished. "+saved).trim(), stopped:("Stopped. "+saved).trim()}[st.status] || "";
+}
+function applyState(st){
+  if(st.reset){ S.rows=[]; $("#log").innerHTML=""; }
+  S.rid=st.rid; S.rowCur=st.next_row; S.logCur=st.next_log; if(st.rows.length) S.rows.push(...st.rows); S.run=st;
+  for(const l of st.logs){ const d=document.createElement("div"); d.className=l.level; d.innerHTML=`<span class="t">${esc(l.t)}</span>${esc(l.msg)}`; $("#log").append(d); }
+  if(st.logs.length){ const lg=$("#log"); lg.scrollTop=lg.scrollHeight; }
+  const c=st.counts; $("#t-done").textContent=st.done; $("#t-of").textContent=`of ${st.total} finished`;
+  for(const k of ["good","passed","issues","error"]) { $("#t-"+k).textContent=c[k]; $("#n-"+k).textContent=c[k]; } $("#n-all").textContent=st.done;
+  $("#t-time").textContent=mm(st.elapsed); $("#t-eta").textContent = st.eta!=null ? `elapsed, about ${mm(st.eta)} left` : "elapsed";
+  const pct=st.total?st.done/st.total*100:0; const b=$("#pbar"); b.firstElementChild.style.width=pct+"%"; b.classList.toggle("paused", st.status==="paused");
+  const busy=isBusy(st);
+  $("#btn-pause").classList.toggle("hidden", !busy || st.status==="stopping"); $("#btn-pause").textContent = st.status==="paused"?"Resume":"Pause";
+  $("#btn-stop").classList.toggle("hidden", !busy); $("#btn-stop").textContent = st.status==="stopping"?"Stop right now":"Stop";
+  $("#run-sub").textContent = runSub(st);
+  $("#nav-badge").textContent = busy ? `${st.done}/${st.total}` : "";
+  $("#btn-save-csv").disabled = $("#btn-share-csv").disabled = !S.rows.length;
+  document.title = busy ? `(${st.done}/${st.total}) Brain AutoSim` : "Brain AutoSim";
+  if(S.prevStatus!==st.status && ["finished","stopped"].includes(st.status) && isBusy({status:S.prevStatus})){
+    toast(`${st.status==="finished"?"All done":"Stopped"}: ${c.good} good, ${c.passed} passed, ${c.issues} with issues, ${c.error} errors`); }
+  S.prevStatus=st.status; updateBar(); if(S.view==="run" && (st.rows.length||st.reset)) renderTable();
+}
+let polling=false;
+async function poll(){ if(polling||!S.session) return; polling=true;
+  try{ applyState(await api(`/api/state?rid=${S.rid}&rows=${S.rowCur}&logs=${S.logCur}`)); }catch(e){ /* ignore */ } polling=false; }
+setInterval(poll, 1000);
+
+/* -------------------------------------------------------------- results table */
+const COLS=[["status","Status"],["expression","Expression"],["sharpe","Sharpe",1],["fitness","Fitness",1],["turnover","Turnover",1],["returns","Returns",1],["drawdown","Drawdown",1],["margin","Margin ‱",1],["issues","Issues"],["variant","Variant"]];
+$("#thead").innerHTML=COLS.map(c=>`<th data-k="${c[0]}" class="${c[2]?"r":""}">${c[1]}<span class="ar"></span></th>`).join("");
+$("#thead").onclick=e=>{ const th=e.target.closest("th"); if(!th) return; const k=th.dataset.k; S.sort = S.sort.key===k ? {key:k,dir:-S.sort.dir} : {key:k,dir:(["expression","status","issues","variant"].includes(k)?1:-1)};
+  const opt=`${S.sort.key}:${S.sort.dir}`; if([...$("#sort-sel").options].some(o=>o.value===opt)) $("#sort-sel").value=opt; renderTable(); };
+$("#sort-sel").onchange=e=>{ const [k,d]=e.target.value.split(":"); S.sort={key:k, dir:Number(d)}; renderTable(); };
+$$(".pill[data-f]").forEach(b=>b.onclick=()=>{ S.filter=b.dataset.f; $$(".pill[data-f]").forEach(x=>x.setAttribute("aria-pressed", x===b)); renderTable(); });
+$("#q").oninput=e=>{ S.q=e.target.value.toLowerCase(); renderTable(); };
+const pct=(x,d=1)=>x==null?"–":(x*100).toFixed(d)+"%";
+const f2=x=>x==null?"–":Number(x).toFixed(2);
+const variantOf=r=>`decay ${r.decay}, ${String(r.neutralization).toLowerCase()}`;
+const sortVal=(r,k)=> k==="issues"?r.fails.join(","): k==="variant"?variantOf(r): r[k];
+function renderTable(){
+  const ind=S.sort; $$("#thead th").forEach(th=>th.querySelector(".ar").textContent = th.dataset.k===ind.key ? (ind.dir<0?"▾":"▴") : "");
+  let rows=S.rows.filter(r=>(S.filter==="all"||r.status===S.filter) && (!S.q || r.expression.toLowerCase().includes(S.q) || String(r.selection||"").toLowerCase().includes(S.q) || String(r.alpha_id).toLowerCase().includes(S.q)));
+  const k=ind.key, d=ind.dir;
+  rows=[...rows].sort((a,b)=>{ const x=sortVal(a,k), y=sortVal(b,k); if(x==null&&y==null) return a.n-b.n; if(x==null) return 1; if(y==null) return -1;
+    return (typeof x==="number"&&typeof y==="number" ? x-y : String(x).localeCompare(String(y)))*d || a.n-b.n; });
+  $("#empty").classList.toggle("hidden", S.rows.length>0); $("#res-table").classList.toggle("hidden", S.rows.length===0);
+  const cap=narrow()?300:1000, shown=rows.slice(0,cap);
+  $("#tbody").innerHTML=shown.map(r=>{
+    const sm=r.sharpe==null?0:Math.max(-1,Math.min(1,r.sharpe/2.5));
+    const sh=r.sharpe==null?"–":`<span class="${r.sharpe>=S.opts.minSharpe?"hi":""}">${f2(r.sharpe)}</span><i class="meter ${sm<0?"neg":""}"><b style="width:${Math.abs(sm)*100}%"></b></i>`;
+    const label={good:"Good",passed:"Passed",issues:"Issues",error:"Error"}[r.status];
+    const issues = r.status==="error" ? `<span style="color:var(--bad)" title="${esc(r.error)}">${esc(r.error.slice(0,70))}</span>` : esc(r.fails.map(x=>x.replace(/_/g," ").toLowerCase()).join(", ")) || "<span class='muted'>none</span>";
+    const sup=r.type==="SUPER";
+    return `<tr class="${r.status}" data-n="${r.n}"><td class="c-st"><span class="st ${r.status}">${label}</span>${subPill(r)}</td><td class="expr" title="${esc(sup?`selection: ${r.selection}\ncombo: ${r.expression}`:r.expression)}">${sup?'<span class="tbadge">SUPER</span>':""}${esc(r.expression)}${sup?`<span class="sel-line">sel: ${esc(r.selection)}</span>`:""}</td>
+      <td class="r num c-m" data-l="Sharpe">${sh}</td><td class="r num c-m ${r.fitness!=null&&r.fitness>=S.opts.minFitness?"hi":""}" data-l="Fitness">${f2(r.fitness)}</td><td class="r num c-m" data-l="Turnover">${pct(r.turnover)}</td><td class="r num c-m" data-l="Returns">${pct(r.returns)}</td>
+      <td class="r num c-m" data-l="Drawdown">${pct(r.drawdown)}</td><td class="r num c-m" data-l="Margin ‱">${r.margin==null?"–":(r.margin*10000).toFixed(1)}</td><td class="small iss c-iss" data-l="${r.status==="error"?"Error":"Issues"}" title="${esc(r.status==='error'?r.error:r.fails.join(', '))}">${issues}</td><td class="small muted var c-var">${esc(variantOf(r))}</td></tr>`; }).join("");
+  $("#tbl-note").textContent = rows.length>cap ? `Showing the first ${cap} of ${rows.length}. Use search or filters, or save the CSV for everything.` : "";
+}
+$("#tbody").onclick=e=>{ const tr=e.target.closest("tr"); if(!tr) return; openDrawer(S.rows.find(r=>r.n==tr.dataset.n)); };
+
+/* ------------------------------------------------------------------- drawer */
+function closeDrawer(){ $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); S.drawerRow=null; }
+$("#scrim").onclick=closeDrawer; document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeDrawer(); });
+const pnlCache=new Map(), dwMsgs=new Map(), dwBusy=new Set();
+const nice=n=>String(n).replace(/_/g," ").toLowerCase();
+const subPill=r=> r.submission ? `<span class="subst ${r.submission==="ACTIVE"?"":r.submission==="PENDING"?"pend":"fail"}">${{ACTIVE:"Submitted",PENDING:"Submitting",FAILED:"Not submitted"}[r.submission]||esc(r.submission)}</span>` : "";
+const msgHtml=m=>`<div class="${m.kind==="ok"?"ok-msg":m.kind==="err"?"err":"info-msg"}">${esc(m.text)}</div>`;
+function setDwMsg(r, kind, text){ dwMsgs.set(r.alpha_id, {kind, text}); const el=$("#dw-msg"); if(el && S.drawerRow===r) el.innerHTML=msgHtml({kind, text}); }
+function openDrawer(r, keep){
+  if(!r) return; S.drawerRow=r; const d=$("#drawer"), top=keep?d.scrollTop:0;
+  const label={good:"Good",passed:"Passed",issues:"Issues",error:"Error"}[r.status], isSup=r.type==="SUPER";
+  const link = r.alpha_id && !String(r.alpha_id).startsWith("DEMO") && S.session && !S.session.demo ? `${S.session.platform}/alpha/${r.alpha_id}` : "";
+  const canAct = r.alpha_id && r.status!=="error", busy=dwBusy.has(r.alpha_id), m=dwMsgs.get(r.alpha_id);
+  d.innerHTML=`<div class="row between nowrap"><span><span class="st ${r.status}">${label}</span>${isSup?' <span class="tbadge">SUPER</span>':""}${subPill(r)}</span><button class="btn sm" id="dw-close">Close</button></div>
+    <h3 style="margin-top:12px">${r.alpha_id?esc(r.alpha_id):"Not simulated"}</h3><p class="muted small">${esc(variantOf(r))} &middot; ${esc(r.region)} ${esc(r.universe)} &middot; delay ${esc(r.delay)} &middot; truncation ${esc(r.truncation)}</p>
+    ${isSup?`<div class="lbl-s">Selection</div><div class="expr-box">${esc(r.selection)}</div><div class="lbl-s">Combo</div><div class="expr-box">${esc(r.expression)}</div>`:`<div class="expr-box">${esc(r.expression)}</div>`}
+    ${r.status==="error"?`<div class="err">${esc(r.error)}</div>`:`
+    <div class="mgrid"><div><div class="v">${f2(r.sharpe)}</div><div class="l">Sharpe</div></div><div><div class="v">${f2(r.fitness)}</div><div class="l">Fitness</div></div><div><div class="v">${pct(r.turnover)}</div><div class="l">Turnover</div></div>
+    <div><div class="v">${pct(r.returns)}</div><div class="l">Returns</div></div><div><div class="v">${pct(r.drawdown)}</div><div class="l">Drawdown</div></div><div><div class="v">${r.margin==null?"–":(r.margin*10000).toFixed(1)}</div><div class="l">Margin ‱</div></div></div>
+    <p class="small muted">${r.long_count??"–"} long / ${r.short_count??"–"} short stocks</p>
+    ${canAct?`<div class="subbox"><div class="row" style="gap:8px"><button class="btn" id="dw-check" ${busy?"disabled":""}>Check submission</button><button class="btn primary" id="dw-submit" ${busy||r.submission==="ACTIVE"?"disabled":""}>${r.submission==="ACTIVE"?"Submitted ✓":"Submit alpha"}</button></div>
+      <div id="dw-msg" style="margin-top:10px">${m?msgHtml(m):`<span class="hint">Check runs BRAIN's full submission checks, including correlation with your other alphas. Submit sends the alpha to BRAIN for good.</span>`}</div></div>`:""}
+    <h3 style="margin:14px 0 6px">Checks${r.checked?' <span class="muted small" style="font:500 .8rem var(--sans)">· full submission check</span>':""}</h3><div class="checks">${(r.checks||[]).map(c=>`<div class="c ${esc(c.result)}"><span>${esc(nice(c.name))}</span><span class="num muted">${c.value!=null?esc(typeof c.value==="number"?+c.value.toFixed(3):c.value):""}${c.limit!=null?" (limit "+esc(c.limit)+")":""} <b>${esc(String(c.result).toLowerCase())}</b></span></div>`).join("")||"<span class='muted'>No checks returned.</span>"}</div>
+    <h3 style="margin:14px 0 6px">PnL</h3><div id="pnl"><p class="muted small">Loading chart...</p></div>`}
+    <div class="row" style="margin-top:18px">${link?`<a class="btn primary" href="${esc(link)}" target="_blank" rel="noopener">Open on BRAIN</a>`:""}
+    ${r.alpha_id?`<button class="btn" id="dw-id">Copy ID</button>`:""}<button class="btn" id="dw-expr">Copy expression</button><button class="btn" id="dw-edit">Edit and retest</button></div>`;
+  d.classList.add("on"); $("#scrim").classList.add("on"); d.scrollTop=top;
+  $("#dw-close").onclick=closeDrawer; if($("#dw-id")) $("#dw-id").onclick=()=>copy(r.alpha_id,"ID");
+  $("#dw-expr").onclick=()=>copy(isSup?`selection: ${r.selection}\ncombo: ${r.expression}`:r.expression, "expression");
+  $("#dw-edit").onclick=()=>{ closeDrawer(); if(isSup){ S.sa.sel=linesOf(S.sa.sel+"\n"+r.selection).join("\n"); S.sa.combo=linesOf(S.sa.combo+"\n"+r.expression).join("\n"); buildSuper(); setMode("super"); }
+    else { appendLines([r.expression]); setMode("regular"); } show("alphas"); toast("Added to your list. Edit it, then start again."); };
+  if($("#dw-check")) $("#dw-check").onclick=()=>drawerCheck(r);
+  if($("#dw-submit")) $("#dw-submit").onclick=()=>drawerSubmit(r);
+  if(r.status!=="error" && r.alpha_id){
+    if(pnlCache.has(r.alpha_id)){ const p=pnlCache.get(r.alpha_id); $("#pnl").innerHTML=lineChart(p.dates,p.values); }
+    else api("/api/pnl?id="+encodeURIComponent(r.alpha_id)).then(p=>{ pnlCache.set(r.alpha_id,p); if(S.drawerRow===r) $("#pnl").innerHTML=lineChart(p.dates,p.values); })
+      .catch(e=>{ if(S.drawerRow===r) $("#pnl").innerHTML=`<p class="muted small">Couldn't load the chart: ${esc(e.message)}</p>`; });
+  }
+}
+async function drawerCheck(r){
+  dwBusy.add(r.alpha_id); openDrawer(r, true); setDwMsg(r, "info", "Running BRAIN's submission checks, including correlation. This can take a minute...");
+  try{ const res=await api("/api/check",{id:r.alpha_id}); const f=res.fails.length;
+    setDwMsg(r, f?"err":"ok", f ? `${f} check${f>1?"s":""} failed: ${res.fails.map(nice).join(", ")}.`
+      : res.pending.length ? `Nothing failed, but ${res.pending.map(nice).join(", ")} is still pending on BRAIN.` : "All submission checks passed. This alpha can be submitted."); }
+  catch(e){ setDwMsg(r, "err", e.message); }
+  finally{ dwBusy.delete(r.alpha_id); if(S.drawerRow===r) openDrawer(r, true); renderTable(); }
+}
+async function drawerSubmit(r){
+  const fails=(r.checks||[]).filter(c=>c.result==="FAIL").map(c=>nice(c.name));
+  const warn = fails.length ? `\n\nWarning: it currently fails ${fails.join(", ")}, so BRAIN will probably refuse it.` : (!r.checked ? "\n\nTip: tap Check submission first to see the correlation checks." : "");
+  if(!confirm(`Submit ${r.alpha_id} to BRAIN?\n\nSubmitting can't be undone, and BRAIN only allows a few submissions per day.${warn}`)) return;
+  const before=r.submission; dwBusy.add(r.alpha_id); r.submission="PENDING"; openDrawer(r, true);
+  setDwMsg(r, "info", "Submitting... BRAIN runs its final checks first, which can take a few minutes. You can close this panel; the result will show here and on the result.");
+  try{ const res=await api("/api/submit",{id:r.alpha_id}); setDwMsg(r, res.ok?"ok":"err", res.message); toast(res.ok?`${r.alpha_id} submitted`:`${r.alpha_id} not submitted`, !res.ok); }
+  catch(e){ r.submission=before||""; setDwMsg(r, "err", e.message); }
+  finally{ dwBusy.delete(r.alpha_id); if(S.drawerRow===r) openDrawer(r, true); renderTable(); }
+}
+function lineChart(dates, vals){
+  if(!vals.length) return "<p class='muted small'>No PnL data returned.</p>";
+  const W=600,H=230,L=54,R=10,T=10,B=24; let lo=Math.min(...vals,0), hi=Math.max(...vals,0); if(hi===lo){hi+=1;lo-=1;}
+  const x=i=>L+(W-L-R)*i/(vals.length-1||1), y=v=>T+(H-T-B)*(1-(v-lo)/(hi-lo));
+  const pts=vals.map((v,i)=>x(i).toFixed(1)+","+y(v).toFixed(1)).join(" ");
+  const fmt=v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+"M":Math.abs(v)>=1e3?(v/1e3).toFixed(0)+"k":v.toFixed(0);
+  let grid=""; for(let i=0;i<=4;i++){ const v=lo+(hi-lo)*i/4; grid+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="var(--muted)">${fmt(v)}</text>`; }
+  let xt=""; let lastY=""; dates.forEach((d,i)=>{ const yr=d.slice(0,4); if(yr!==lastY){ lastY=yr; if(i>0) xt+=`<text x="${x(i)}" y="${H-7}" font-size="10" text-anchor="middle" fill="var(--muted)">${yr}</text>`; } });
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Cumulative PnL over time">${grid}<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="var(--muted)" stroke-dasharray="3 3"/>${xt}<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linejoin="round"/></svg>
+    <p class="hint">${esc(dates[0])} to ${esc(dates[dates.length-1])}. Cumulative profit and loss.</p>`;
+}
+
+/* ------------------------------------------------------------ data explorer */
+const exCtx=()=>`${S.settings.region} · ${S.settings.universe} · delay ${S.settings.delay}`;
+const exQs=extra=>new URLSearchParams({region:S.settings.region, delay:S.settings.delay, universe:S.settings.universe, ...extra}).toString();
+function enterExplore(){ $("#ex-ctx").textContent=exCtx(); }
+$$("[data-x]").forEach(b=>b.onclick=()=>{ S.ex.tab=b.dataset.x; $$("[data-x]").forEach(x=>x.setAttribute("aria-pressed", x===b));
+  for(const t of ["fields","datasets","ops"]) $("#x-"+t).classList.toggle("hidden", t!==S.ex.tab);
+  if(S.ex.tab==="ops" && !S.ex.opsLoaded) loadOps(); if(S.ex.tab==="datasets" && !$("#d-body").children.length) loadDatasets(); });
+async function loadFields(more){
+  if(!more){ S.ex.offset=0; $("#f-body").innerHTML=""; } $("#f-empty").textContent="Loading..."; $("#f-empty").classList.remove("hidden");
+  try{ const r=await api("/api/datafields?"+exQs({search:$("#f-q").value.trim(), dataset:S.ex.dataset, offset:S.ex.offset}));
+    const res=r.results||[]; $("#f-body").insertAdjacentHTML("beforeend", res.map(f=>`<tr><td class="mono f-id"><b>${esc(f.id)}</b></td><td class="small f-desc">${esc(f.description)}</td><td class="small f-ds" data-l="Dataset">${esc(f.dataset?.id||"")}</td>
+      <td class="f-type"><span class="badge ${f.type==="VECTOR"?"vec":""}">${esc(f.type)}</span></td><td class="r num f-cov" data-l="Coverage">${f.coverage!=null?(f.coverage*100).toFixed(0)+"%":"–"}</td><td class="r num f-ac" data-l="Alphas">${esc(f.alphaCount??"–")}</td>
+      <td class="f-act" style="white-space:nowrap"><button class="btn sm" data-use="${esc(f.id)}" data-type="${esc(f.type)}">Use in template</button> <button class="btn sm ghost" data-cp="${esc(f.id)}">Copy</button></td></tr>`).join(""));
+    S.ex.offset += res.length; const total=r.count??0; $("#f-more").classList.toggle("hidden", S.ex.offset>=total || !res.length);
+    $("#f-note").textContent = total?`Showing ${S.ex.offset} of ${total}`:""; $("#f-empty").classList.toggle("hidden", $("#f-body").children.length>0); if(!$("#f-body").children.length) $("#f-empty").textContent="No fields matched. Try a shorter search.";
+  }catch(e){ $("#f-empty").textContent=e.message; }
+}
+$("#f-go").onclick=()=>loadFields(false); $("#f-q").onkeydown=e=>{ if(e.key==="Enter"){ e.target.blur(); loadFields(false); } }; $("#f-more").onclick=()=>loadFields(true);
+$("#f-ds-clear").onclick=()=>{ S.ex.dataset=""; $("#f-ds").classList.add("hidden"); $("#f-ds-clear").classList.add("hidden"); loadFields(false); };
+$("#f-body").onclick=e=>{ const u=e.target.closest("[data-use]"), c=e.target.closest("[data-cp]");
+  if(c) return copy(c.dataset.cp, c.dataset.cp);
+  if(u){ const id=u.dataset.use, val = u.dataset.type==="VECTOR" ? `vec_avg(${id})` : id; const cur=splitVals(S.tpl.v.field);
+    if(!placeholders(S.tpl.t).includes("field")){ toast("Your template has no {field} slot. Pick a template that uses {field}.", true); return; }
+    if(!cur.includes(val)) cur.push(val); S.tpl.v.field=cur.join(", "); delete S.tpl.src.field; renderTpl(); saveCfg(); toast(`Added ${val} to {field} in the template builder`); } };
+async function loadDatasets(){ $("#d-empty").textContent="Loading..."; $("#d-empty").classList.remove("hidden");
+  try{ const r=await api("/api/datasets?"+exQs({search:$("#d-q").value.trim()})); const res=r.results||[];
+    $("#d-body").innerHTML=res.map(d=>`<tr><td class="mono d-id"><b>${esc(d.id)}</b></td><td class="d-name">${esc(d.name)}</td><td class="small d-cat" data-l="Category">${esc(d.category?.name||"")}</td><td class="r num d-fc" data-l="Fields">${esc(d.fieldCount??"–")}</td><td class="r num d-cov" data-l="Coverage">${d.coverage!=null?(d.coverage*100).toFixed(0)+"%":"–"}</td>
+      <td class="d-act"><button class="btn sm" data-ds="${esc(d.id)}">See fields</button></td></tr>`).join(""); $("#d-empty").classList.toggle("hidden", res.length>0); if(!res.length) $("#d-empty").textContent="No datasets matched.";
+  }catch(e){ $("#d-empty").textContent=e.message; } }
+$("#d-go").onclick=loadDatasets; $("#d-q").onkeydown=e=>{ if(e.key==="Enter"){ e.target.blur(); loadDatasets(); } };
+$("#d-body").onclick=e=>{ const b=e.target.closest("[data-ds]"); if(!b) return; S.ex.dataset=b.dataset.ds; $("#f-ds").textContent="Dataset: "+S.ex.dataset; $("#f-ds").classList.remove("hidden"); $("#f-ds-clear").classList.remove("hidden");
+  $$("[data-x]")[0].click(); $("#f-q").value=""; loadFields(false); };
+async function loadOps(){ try{ const r=await api("/api/operators"); S.ex.ops=r; S.ex.opsLoaded=true; const cats=[...new Set(r.map(o=>o.category))].sort();
+  $("#o-cat").innerHTML='<option value="">All categories</option>'+cats.map(c=>`<option>${esc(c)}</option>`).join(""); renderOps(); }catch(e){ $("#o-empty").textContent=e.message; } }
+function renderOps(){ const q=$("#o-q").value.toLowerCase(), cat=$("#o-cat").value;
+  const rows=S.ex.ops.filter(o=>(!cat||o.category===cat)&&(!q||(o.name+" "+(o.description||"")+" "+(o.definition||"")).toLowerCase().includes(q)));
+  $("#o-body").innerHTML=rows.map(o=>`<tr><td class="mono o-name"><b>${esc(o.name)}</b></td><td class="small o-cat"><span class="badge">${esc(o.category)}</span></td><td class="mono small o-def">${esc(o.definition||"")}</td><td class="small o-desc">${esc(o.description||"")}</td></tr>`).join("");
+  $("#o-empty").classList.toggle("hidden", rows.length>0); $("#o-empty").textContent="No operators match."; }
+$("#o-q").oninput=renderOps; $("#o-cat").onchange=renderOps;
+
+/* --------------------------------------------------------------------- boot */
+async function boot(){
+  const cfg = await api("/api/config").catch(()=>({}));
+  if(cfg.email) $("#email").value=cfg.email; S.hasSaved=!!cfg.has_password; if(S.hasSaved){ $("#password").placeholder="Using your saved password"; $("#rem-pass").checked=true; }
+  if(cfg.settings) S.settings={...DEFAULT_SETTINGS,...cfg.settings}; if(cfg.runopts) S.opts={...DEFAULT_OPTS,...cfg.runopts}; if(cfg.template && cfg.template.t!==undefined) S.tpl={src:{}, mode:"all", n:100, ...cfg.template, src:cfg.template.src||{}};
+  if(cfg.mode) S.mode=cfg.mode; if(cfg.super) S.sa={...SA_DEFAULT, ...cfg.super};
+  if(cfg.ai) S.ai={...AI_DEFAULT, ...cfg.ai, spec:{...AI_DEFAULT.spec, ...(cfg.ai.spec||{})}}; if(Array.isArray(cfg.lists)) S.lists=cfg.lists;
+  if(typeof cfg.alphas==="string") $("#alphaText").value=cfg.alphas;
+  $("#tpl-mode").value=S.tpl.mode||"all"; $("#tpl-n").value=S.tpl.n||100;
+  renderTpl(true); refreshAlphas(); buildSuper(); setMode(S.mode, true); const sess = await api("/api/session").catch(()=>null);
+  if(sess && sess.logged_in){ await afterLogin(); } else show("login");
+}
+boot();
+</script>
+</body>
+</html>
